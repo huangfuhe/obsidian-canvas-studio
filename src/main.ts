@@ -395,13 +395,16 @@ export default class CanvasStudioPlugin extends Plugin {
     const edges = selectedEdgeData(canvas);
     if (nodes.length > 0) {
       this.renderNodeInspector(inspector, nodes);
-      return;
-    }
-    if (edges.length > 0) {
+    } else if (edges.length > 0) {
       this.renderEdgeInspector(inspector, edges);
-      return;
+    } else {
+      this.renderCanvasInspector(inspector, canvas);
     }
-    this.renderCanvasInspector(inspector, canvas);
+    if (canvas.readonly) {
+      inspector.querySelectorAll('button, input, select, textarea').forEach((element) => {
+        (element as HTMLButtonElement | HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement).disabled = true;
+      });
+    }
   }
 
   private renderInspectorHeader(container: HTMLElement, title: string, detail: string): void {
