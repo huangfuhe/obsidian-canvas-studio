@@ -105,6 +105,7 @@ export default class CanvasStudioPlugin extends Plugin {
   private snappingNodeIds = new Set<string>();
   private componentDropCanvas: RuntimeCanvas | null = null;
   private componentDropPreview: HTMLElement | null = null;
+  private activeComponentDragId: string | null = null;
 
   override async onload(): Promise<void> {
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
@@ -205,7 +206,10 @@ export default class CanvasStudioPlugin extends Plugin {
     this.registerDomEvent(document, 'keydown', (event) => this.handleKeydown(event));
     this.registerDomEvent(document, 'dragover', (event) => this.handleComponentDragOver(event));
     this.registerDomEvent(document, 'drop', (event) => this.handleComponentDrop(event));
-    this.registerDomEvent(document, 'dragend', () => this.clearComponentDropPreview());
+    this.registerDomEvent(document, 'dragend', () => {
+      this.activeComponentDragId = null;
+      this.clearComponentDropPreview();
+    });
     this.registerEvent(this.app.workspace.on('layout-change', () => this.refreshToolbar()));
     this.registerEvent(this.app.workspace.on('active-leaf-change', () => this.refreshToolbar()));
     this.registerEvent(this.app.workspace.on('advanced-canvas:canvas-changed' as never, () => this.refreshToolbar()));
@@ -568,7 +572,7 @@ export default class CanvasStudioPlugin extends Plugin {
   private handleComponentDragOver(event: DragEvent): void {
     const canvas = this.componentDropCanvas;
     if (!canvas || canvas.readonly || !event.dataTransfer?.types.includes(COMPONENT_MIME)) return;
-    const componentId = event.dataTransfer.getData(COMPONENT_MIME);
+    const componentId = event.dataTransfer.getData(COMPONENT_MIME) || this.activeComponentDragId;
     const component = this.availableComponents().find((candidate) => candidate.id === componentId);
     if (!component) return;
     event.preventDefault();
@@ -580,7 +584,7 @@ export default class CanvasStudioPlugin extends Plugin {
   private handleComponentDrop(event: DragEvent): void {
     const canvas = this.componentDropCanvas;
     if (!canvas || canvas.readonly || !event.dataTransfer?.types.includes(COMPONENT_MIME)) return;
-    const componentId = event.dataTransfer.getData(COMPONENT_MIME);
+    const componentId = event.dataTransfer.getData(COMPONENT_MIME) || this.activeComponentDragId;
     const component = this.availableComponents().find((candidate) => candidate.id === componentId);
     if (!component) return;
     event.preventDefault();
@@ -601,6 +605,10 @@ export default class CanvasStudioPlugin extends Plugin {
     this.componentDropCanvas?.wrapperEl?.classList.remove('canvas-studio-component-drop-target');
     this.componentDropPreview?.remove();
     this.componentDropPreview = null;
+  }
+
+  private beginComponentDrag(componentId: string): void {
+    this.activeComponentDragId = componentId;
   }
 
   private componentDropPoint(canvas: RuntimeCanvas, clientX: number, clientY: number): { x: number; y: number } {
@@ -826,7 +834,7 @@ export default class CanvasStudioPlugin extends Plugin {
   private openComponentLibrary(): void {
     const canvas = this.currentCanvas();
     if (!canvas) return;
-    new ComponentLibraryModal(this.app, (component) => this.insertComponent(component), this.availableComponents(), () => this.openSaveComponent()).open();
+    new ComponentLibraryModal(this.app, (component) => this.insertComponent(component), this.availableComponents(), () => this.openSaveComponent(), (componentId) => this.beginComponentDrag(componentId)).open();
   }
 
   private availableComponents(): ComponentSpec[] {
@@ -1514,7 +1522,8 @@ class ComponentLibraryModal extends Modal {
     app: CanvasStudioPlugin['app'],
     private readonly insert: (component: ComponentSpec) => void,
     private readonly components: ComponentSpec[] = COMPONENT_LIBRARY,
-    private readonly saveSelection?: () => void
+    private readonly saveSelection?: () => void,
+    private readonly onDragStart?: (componentId: string) => void
   ) {
     super(app);
   }
@@ -1541,6 +1550,7 @@ class ComponentLibraryModal extends Modal {
         button.addEventListener('dragstart', (event) => {
           event.dataTransfer?.setData(COMPONENT_MIME, component.id);
           if (event.dataTransfer) event.dataTransfer.effectAllowed = 'copy';
+          this.onDragStart?.(component.id);
           this.close();
         });
         button.addEventListener('click', () => {
