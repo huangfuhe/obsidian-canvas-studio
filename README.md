@@ -72,6 +72,10 @@ Vault media library. Search and filter images, SVGs, PDFs, and common files,
 then insert the selected asset as a standard Canvas `file` node. Image assets
 show a thumbnail preview; no content sidecar file is created.
 
+The 0.9.4 development build adds group and swimlane auto-fit: select a group
+and use the inspector action to resize it to the bounds of its contained nodes
+without moving those nodes.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual

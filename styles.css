@@ -75,6 +75,11 @@
   box-sizing: border-box;
 }
 
+.canvas-studio-inspector-action {
+  width: 100%;
+  min-height: 32px;
+}
+
 .canvas-studio-inspector-check {
   display: flex;
   align-items: center;

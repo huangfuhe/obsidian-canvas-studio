@@ -24,6 +24,7 @@ import { arrangeNodes, type ArrangeMode } from './arrange';
 import { alignCanvasEdges, mergeEdgeStyle, mergeNodeStyle, safeInsertionOrigin, updateNodes } from './canvas-data';
 import { diagnoseCanvas, type CanvasHealthIssue } from './diagnostics';
 import { moveGroupChildren } from './group-follow';
+import { fitGroupsToChildren } from './group-layout';
 import { computeMindMapLayout, moveNodesToLayout } from './layout';
 import { outlineToCanvas, parseMarkdownOutline } from './outline';
 import { findCanvasMatches, replaceAllMatches, replaceCurrentMatch, type CanvasSearchMatch } from './search';
@@ -420,6 +421,17 @@ export default class CanvasStudioPlugin extends Plugin {
     }
     shape.value = typeof nodes[0]?.styleAttributes?.shape === 'string' ? nodes[0].styleAttributes.shape : '';
     shape.addEventListener('change', () => this.applyShape(shape.value || null));
+
+    const groups = nodes.filter((node) => node.type === 'group');
+    if (groups.length > 0) {
+      const layoutField = field('分组布局');
+      const fit = layoutField.createEl('button', {
+        text: '按内容自适应尺寸',
+        cls: 'canvas-studio-inspector-action'
+      });
+      setTooltip(fit, '根据组内节点边界调整分组尺寸，保留节点位置', { placement: 'top' });
+      fit.addEventListener('click', () => this.fitSelectedGroups());
+    }
 
     const colorField = field('节点颜色');
     const color = colorField.createEl('select');
@@ -1091,6 +1103,27 @@ export default class CanvasStudioPlugin extends Plugin {
     const ids = new Set(this.selection(canvas).map((node) => node.id));
     if (ids.size === 0) return;
     replaceCanvasData(canvas, updateNodes(canvas.getData(), ids, (node) => ({ ...node, ...patch })));
+  }
+
+  private fitSelectedGroups(): void {
+    const canvas = this.currentCanvas();
+    if (!canvas || canvas.readonly) return;
+    const groupIds = new Set(this.selection(canvas)
+      .filter((node) => node.type === 'group')
+      .map((node) => node.id));
+    if (groupIds.size === 0) return;
+    const data = canvas.getData();
+    const nextData = fitGroupsToChildren(data, groupIds);
+    const changed = nextData.nodes.some((node, index) => {
+      const previous = data.nodes[index];
+      return previous && (node.x !== previous.x || node.y !== previous.y || node.width !== previous.width || node.height !== previous.height);
+    });
+    if (!changed) {
+      new Notice('选中的分组没有可适应的内部节点。', 2200);
+      return;
+    }
+    replaceCanvasData(canvas, nextData);
+    new Notice(`已调整 ${groupIds.size} 个分组的尺寸。`, 1800);
   }
 
   private applyEdgeColor(color: string): void {
