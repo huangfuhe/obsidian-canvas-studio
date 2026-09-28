@@ -54,6 +54,9 @@ The 0.8.x development build adds a contextual property inspector: canvas state
 when nothing is selected, node properties for selected nodes, and routing
 properties for selected edges.
 
+It also adds smart snapping to a configurable grid and nearby node guides when
+nodes are moved.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual

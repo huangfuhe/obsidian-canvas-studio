@@ -111,6 +111,26 @@
   font-size: var(--font-ui-smaller);
 }
 
+.canvas-studio-snap-guide {
+  position: absolute;
+  z-index: 100;
+  pointer-events: none;
+  background: var(--interactive-accent);
+  opacity: 0.75;
+}
+
+.canvas-studio-snap-guide-x {
+  top: -100000px;
+  width: 1px;
+  height: 200000px;
+}
+
+.canvas-studio-snap-guide-y {
+  left: -100000px;
+  width: 200000px;
+  height: 1px;
+}
+
 .canvas-studio-toolbar .canvas-studio-divider {
   width: 1px;
   height: 22px;

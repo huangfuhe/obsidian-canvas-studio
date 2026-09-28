@@ -39,6 +39,7 @@ interface RuntimeCanvasElement {
 
 export interface RuntimeCanvas {
   wrapperEl?: HTMLElement;
+  canvasEl?: HTMLElement;
   readonly?: boolean;
   metadata?: Record<string, unknown>;
   data?: CanvasDocument;

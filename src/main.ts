@@ -26,6 +26,7 @@ import { computeMindMapLayout, moveNodesToLayout } from './layout';
 import { outlineToCanvas, parseMarkdownOutline } from './outline';
 import { findCanvasMatches, replaceAllMatches, replaceCurrentMatch, type CanvasSearchMatch } from './search';
 import { markdownTextSelection, styleTextSelection, type TextSelectionSnapshot } from './rich-text';
+import { snapNodePosition } from './snap';
 import { instantiateSwimlane, SWIMLANE_TEMPLATES } from './swimlane';
 import { FLOW_TEMPLATES, instantiateFlowTemplate } from './templates';
 import { applyCanvasTheme, CANVAS_THEMES } from './themes';
@@ -36,13 +37,19 @@ interface CanvasStudioSettings {
   defaultFontSize: number;
   layoutDirection: LayoutDirection;
   showToolbar: boolean;
+  smartSnap: boolean;
+  snapGridSize: number;
+  snapThreshold: number;
 }
 
 const DEFAULT_SETTINGS: CanvasStudioSettings = {
   defaultFontFamily: 'sans-serif',
   defaultFontSize: 16,
   layoutDirection: 'right',
-  showToolbar: true
+  showToolbar: true,
+  smartSnap: true,
+  snapGridSize: 20,
+  snapThreshold: 12
 };
 
 const TOOLBAR_ACTIONS = [
@@ -72,6 +79,7 @@ export default class CanvasStudioPlugin extends Plugin {
   private toolbarCanvas: RuntimeCanvas | null = null;
   private copiedStyle: CanvasStyleAttributes | null = null;
   private pendingTextSelection: TextSelectionSnapshot | null = null;
+  private snappingNodeIds = new Set<string>();
 
   override async onload(): Promise<void> {
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
@@ -168,6 +176,11 @@ export default class CanvasStudioPlugin extends Plugin {
       const node = args[1] as RuntimeCanvasNode | undefined;
       if (node) this.applyTypography(node);
     }));
+    this.registerEvent(this.app.workspace.on('advanced-canvas:node-moved' as never, (...args: unknown[]) => {
+      const canvas = args[0] as RuntimeCanvas | undefined;
+      const node = args[1] as RuntimeCanvasNode | undefined;
+      if (canvas && node) this.handleNodeMoved(canvas, node);
+    }));
     this.registerEvent(this.app.workspace.on('advanced-canvas:canvas-view-unloaded:before' as never, () => this.unmountToolbar()));
 
     this.refreshToolbar();
@@ -207,6 +220,40 @@ export default class CanvasStudioPlugin extends Plugin {
       event.preventDefault();
       this.createSiblingNode();
     }
+  }
+
+  private handleNodeMoved(canvas: RuntimeCanvas, node: RuntimeCanvasNode): void {
+    if (!this.settings.smartSnap || this.snappingNodeIds.has(node.id) || canvas.readonly) return;
+    const data = node.getData();
+    const others = canvas.getData().nodes.filter((candidate) => candidate.id !== node.id);
+    const snapped = snapNodePosition(data, others, {
+      gridSize: this.settings.snapGridSize,
+      threshold: this.settings.snapThreshold
+    });
+    if (snapped.x === data.x && snapped.y === data.y) return;
+    this.snappingNodeIds.add(node.id);
+    node.setData({ ...data, x: snapped.x, y: snapped.y });
+    canvas.requestSave?.();
+    this.showSnapGuides(canvas, snapped.guideX, snapped.guideY);
+    window.setTimeout(() => this.snappingNodeIds.delete(node.id), 0);
+  }
+
+  private showSnapGuides(canvas: RuntimeCanvas, x?: number, y?: number): void {
+    const container = canvas.canvasEl;
+    if (!container) return;
+    container.querySelectorAll('.canvas-studio-snap-guide').forEach((guide) => guide.remove());
+    const guides: HTMLElement[] = [];
+    if (x !== undefined) {
+      const guide = container.createDiv({ cls: 'canvas-studio-snap-guide canvas-studio-snap-guide-x' });
+      guide.style.left = `${x}px`;
+      guides.push(guide);
+    }
+    if (y !== undefined) {
+      const guide = container.createDiv({ cls: 'canvas-studio-snap-guide canvas-studio-snap-guide-y' });
+      guide.style.top = `${y}px`;
+      guides.push(guide);
+    }
+    window.setTimeout(() => guides.forEach((guide) => guide.remove()), 700);
   }
 
   private refreshToolbar(): void {
@@ -1348,6 +1395,28 @@ class CanvasStudioSettingTab extends PluginSettingTab {
         .setValue(this.plugin.settings.showToolbar)
         .onChange(async (value) => {
           this.plugin.settings.showToolbar = value;
+          await this.plugin.saveSettings();
+        }));
+
+    new Setting(containerEl)
+      .setName('智能吸附')
+      .setDesc('移动节点后吸附到网格或邻近节点的边缘和中心线。')
+      .addToggle((toggle) => toggle
+        .setValue(this.plugin.settings.smartSnap)
+        .onChange(async (value) => {
+          this.plugin.settings.smartSnap = value;
+          await this.plugin.saveSettings();
+        }));
+
+    new Setting(containerEl)
+      .setName('吸附阈值')
+      .setDesc('节点距离参考线多少像素以内时触发吸附。')
+      .addSlider((slider) => slider
+        .setLimits(4, 24, 1)
+        .setValue(this.plugin.settings.snapThreshold)
+        .setDynamicTooltip()
+        .onChange(async (value) => {
+          this.plugin.settings.snapThreshold = value;
           await this.plugin.saveSettings();
         }));
 

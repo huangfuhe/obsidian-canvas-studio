@@ -8,6 +8,8 @@
 - Node inspector controls for font size, font family, alignment, and shape.
 - Edge inspector controls for routing and selected-edge alignment.
 - Canvas summary in the empty-selection inspector state.
+- Smart snapping to a 20px grid and nearby node edges/centerlines with temporary
+  alignment guides.
 
 ### Direction
 
