@@ -323,6 +323,12 @@
   background: var(--background-modifier-hover);
 }
 
+.canvas-studio-component-save {
+  width: 100%;
+  min-height: 36px;
+  margin-bottom: 10px;
+}
+
 .canvas-studio-component-card .svg-icon {
   grid-row: span 2;
   align-self: center;

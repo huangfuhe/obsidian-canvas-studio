@@ -1,6 +1,6 @@
 import type { CanvasDocument, CanvasNodeData } from './types';
 
-export type ComponentCategory = '常用组件' | '流程组件' | '容器组件';
+export type ComponentCategory = '常用组件' | '流程组件' | '容器组件' | '我的组件';
 
 export interface ComponentSpec {
   id: string;
@@ -116,9 +116,9 @@ export const COMPONENT_LIBRARY: ComponentSpec[] = [
   }
 ];
 
-export function componentsByCategory(): Map<ComponentCategory, ComponentSpec[]> {
+export function componentsByCategory(extra: ComponentSpec[] = []): Map<ComponentCategory, ComponentSpec[]> {
   const result = new Map<ComponentCategory, ComponentSpec[]>();
-  for (const component of COMPONENT_LIBRARY) {
+  for (const component of [...COMPONENT_LIBRARY, ...extra]) {
     const list = result.get(component.category) ?? [];
     list.push(component);
     result.set(component.category, list);

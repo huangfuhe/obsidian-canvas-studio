@@ -32,6 +32,7 @@ import { instantiateSwimlane, SWIMLANE_TEMPLATES } from './swimlane';
 import { FLOW_TEMPLATES, instantiateFlowTemplate } from './templates';
 import { applyCanvasTheme, CANVAS_THEMES } from './themes';
 import { COMPONENT_LIBRARY, componentsByCategory, type ComponentSpec } from './components';
+import { createSavedComponent, instantiateSavedComponent, type SavedCanvasComponent } from './saved-components';
 import type { CanvasDocument, CanvasNodeData, CanvasStyleAttributes, LayoutDirection } from './types';
 
 interface CanvasStudioSettings {
@@ -43,6 +44,7 @@ interface CanvasStudioSettings {
   snapGridSize: number;
   snapThreshold: number;
   groupFollowChildren: boolean;
+  savedComponents: SavedCanvasComponent[];
 }
 
 const DEFAULT_SETTINGS: CanvasStudioSettings = {
@@ -52,8 +54,9 @@ const DEFAULT_SETTINGS: CanvasStudioSettings = {
   showToolbar: true,
   smartSnap: true,
   snapGridSize: 20,
-  snapThreshold: 12
-  ,groupFollowChildren: true
+  snapThreshold: 12,
+  groupFollowChildren: true,
+  savedComponents: []
 };
 
 const TOOLBAR_ACTIONS = [
@@ -175,6 +178,11 @@ export default class CanvasStudioPlugin extends Plugin {
       id: 'component-library',
       name: 'Canvas Studio: 打开常用组件库',
       checkCallback: (checking) => this.commandAvailability(checking, () => this.openComponentLibrary())
+    });
+    this.addCommand({
+      id: 'save-selection-component',
+      name: 'Canvas Studio: 保存选区为组件',
+      checkCallback: (checking) => this.commandAvailability(checking, () => this.openSaveComponent())
     });
 
     this.registerDomEvent(document, 'keydown', (event) => this.handleKeydown(event));
@@ -693,7 +701,34 @@ export default class CanvasStudioPlugin extends Plugin {
   private openComponentLibrary(): void {
     const canvas = this.currentCanvas();
     if (!canvas) return;
-    new ComponentLibraryModal(this.app, (component) => this.insertComponent(component)).open();
+    const saved = this.settings.savedComponents.map((component) => ({
+      id: component.id,
+      name: component.name,
+      category: '我的组件' as const,
+      description: `保存于本地的 ${component.nodes.length} 个节点组件。`,
+      build: (origin: { x: number; y: number }, idFactory: (prefix: string) => string) => instantiateSavedComponent(component, origin, idFactory)
+    }));
+    new ComponentLibraryModal(this.app, (component) => this.insertComponent(component), [...COMPONENT_LIBRARY, ...saved], () => this.openSaveComponent()).open();
+  }
+
+  private openSaveComponent(): void {
+    const canvas = this.currentCanvas();
+    if (!canvas) return;
+    const ids = new Set(this.selection(canvas).map((node) => node.id));
+    if (ids.size === 0) {
+      new Notice('请先选择要保存的节点。', 2500);
+      return;
+    }
+    new ComponentNameModal(this.app, (name) => {
+      try {
+        const component = createSavedComponent(canvas.getData(), ids, randomId('component'), name);
+        this.settings.savedComponents = [...this.settings.savedComponents, component];
+        void this.saveSettings();
+        new Notice(`已保存组件：${name}`, 1800);
+      } catch (error) {
+        new Notice(error instanceof Error ? error.message : '保存组件失败。', 3000);
+      }
+    }).open();
   }
 
   private insertComponent(component: ComponentSpec): void {
@@ -1272,7 +1307,9 @@ class CanvasInfoModal extends Modal {
 class ComponentLibraryModal extends Modal {
   constructor(
     app: CanvasStudioPlugin['app'],
-    private readonly insert: (component: ComponentSpec) => void
+    private readonly insert: (component: ComponentSpec) => void,
+    private readonly components: ComponentSpec[] = COMPONENT_LIBRARY,
+    private readonly saveSelection?: () => void
   ) {
     super(app);
   }
@@ -1280,7 +1317,13 @@ class ComponentLibraryModal extends Modal {
   override onOpen(): void {
     this.titleEl.setText('常用组件库');
     this.modalEl.addClass('canvas-studio-component-modal');
-    for (const [category, components] of componentsByCategory()) {
+    if (this.saveSelection) {
+      const save = this.contentEl.createEl('button', { text: '保存当前选区为组件', cls: 'mod-cta canvas-studio-component-save' });
+      save.addEventListener('click', () => { this.close(); this.saveSelection?.(); });
+    }
+    const builtInIds = new Set(COMPONENT_LIBRARY.map((component) => component.id));
+    const extra = this.components.filter((component) => !builtInIds.has(component.id));
+    for (const [category, components] of componentsByCategory(extra)) {
       this.contentEl.createEl('h3', { text: category, cls: 'canvas-studio-component-category' });
       const grid = this.contentEl.createDiv({ cls: 'canvas-studio-component-grid' });
       for (const component of components) {
@@ -1295,6 +1338,37 @@ class ComponentLibraryModal extends Modal {
         });
       }
     }
+  }
+
+  override onClose(): void {
+    this.contentEl.empty();
+  }
+}
+
+class ComponentNameModal extends Modal {
+  constructor(app: CanvasStudioPlugin['app'], private readonly submit: (name: string) => void) {
+    super(app);
+  }
+
+  override onOpen(): void {
+    this.titleEl.setText('保存为组件');
+    const input = this.contentEl.createEl('input', {
+      type: 'text',
+      attr: { placeholder: '组件名称', 'aria-label': '组件名称' }
+    });
+    const actions = this.contentEl.createDiv({ cls: 'canvas-studio-modal-actions' });
+    const cancel = actions.createEl('button', { text: '取消' });
+    const save = actions.createEl('button', { text: '保存', cls: 'mod-cta' });
+    const commit = () => {
+      const value = input.value.trim();
+      if (!value) return new Notice('请输入组件名称。', 2000);
+      this.submit(value);
+      this.close();
+    };
+    cancel.addEventListener('click', () => this.close());
+    save.addEventListener('click', commit);
+    input.addEventListener('keydown', (event) => { if (event.key === 'Enter') commit(); });
+    window.setTimeout(() => input.focus(), 0);
   }
 
   override onClose(): void {

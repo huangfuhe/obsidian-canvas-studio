@@ -64,6 +64,9 @@ inserted as native Canvas nodes; no component content sidecar is created.
 The 0.9.1 patch keeps nodes inside a group or swimlane moving with their parent,
 matching the expected container behavior of a whiteboard editor.
 
+The 0.9.2 development build adds local saved components: select nodes, save a
+named component, and insert fresh copies from the `我的组件` library category.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.9.2 - 2026-09-28
+
+### Added
+
+- Save the current Canvas selection as a reusable local component.
+- Persist saved components in Canvas Studio settings without creating content
+  sidecar files.
+- Re-insert saved components with remapped node and edge IDs.
+
 ## 0.9.1 - 2026-09-28
 
 ### Added
