@@ -20,7 +20,7 @@ import {
   type RuntimeCanvasNode
 } from './canvas-compat';
 import { arrangeNodes, type ArrangeMode } from './arrange';
-import { mergeEdgeStyle, mergeNodeStyle, safeInsertionOrigin, updateNodes } from './canvas-data';
+import { alignCanvasEdges, mergeEdgeStyle, mergeNodeStyle, safeInsertionOrigin, updateNodes } from './canvas-data';
 import { diagnoseCanvas, type CanvasHealthIssue } from './diagnostics';
 import { computeMindMapLayout, moveNodesToLayout } from './layout';
 import { outlineToCanvas, parseMarkdownOutline } from './outline';
@@ -45,23 +45,23 @@ const DEFAULT_SETTINGS: CanvasStudioSettings = {
 };
 
 const TOOLBAR_ACTIONS = [
-  { id: 'create-child', icon: 'git-branch', label: '创建子节点' },
-  { id: 'create-sibling', icon: 'git-merge', label: '创建同级节点' },
-  { id: 'layout', icon: 'layout-dashboard', label: '自动布局思维导图' },
-  { id: 'import', icon: 'list-tree', label: '导入 Markdown 大纲' },
-  { id: 'template', icon: 'layout-template', label: '流程图模板' },
-  { id: 'arrange', icon: 'align-horizontal-distribute-center', label: '对齐与分布' },
-  { id: 'shape', icon: 'shapes', label: '流程图形状' },
-  { id: 'edge', icon: 'git-commit-horizontal', label: '连线样式' },
-  { id: 'style', icon: 'type', label: '字体与文本样式' },
-  { id: 'theme', icon: 'palette', label: '白板主题' },
-  { id: 'search', icon: 'search', label: '搜索与替换文本' },
-  { id: 'export', icon: 'download', label: '导出白板' },
-  { id: 'present', icon: 'presentation', label: '演示模式' },
-  { id: 'info', icon: 'info', label: '画布信息' },
-  { id: 'diagnostics', icon: 'shield-check', label: '检查白板完整性' },
-  { id: 'copy-style', icon: 'paintbrush', label: '复制格式' },
-  { id: 'paste-style', icon: 'paintbrush-2', label: '粘贴格式' }
+  { id: 'create-child', icon: 'git-branch', label: '创建子节点', shortLabel: '子节点' },
+  { id: 'create-sibling', icon: 'git-merge', label: '创建同级节点', shortLabel: '同级' },
+  { id: 'layout', icon: 'layout-dashboard', label: '自动布局思维导图', shortLabel: '布局' },
+  { id: 'import', icon: 'list-tree', label: '导入 Markdown 大纲', shortLabel: '导入' },
+  { id: 'template', icon: 'layout-template', label: '流程图与泳道模板', shortLabel: '模板' },
+  { id: 'arrange', icon: 'align-horizontal-distribute-center', label: '节点对齐与分布', shortLabel: '排版' },
+  { id: 'shape', icon: 'shapes', label: '设置流程图形状', shortLabel: '形状' },
+  { id: 'edge', icon: 'git-commit-horizontal', label: '连线样式与自动整理', shortLabel: '连线' },
+  { id: 'style', icon: 'type', label: '字体与文本样式', shortLabel: '字体' },
+  { id: 'theme', icon: 'palette', label: '应用白板主题', shortLabel: '主题' },
+  { id: 'search', icon: 'search', label: '搜索与替换文本', shortLabel: '搜索' },
+  { id: 'export', icon: 'download', label: '导出白板图片', shortLabel: '导出' },
+  { id: 'present', icon: 'presentation', label: '开始演示模式', shortLabel: '演示' },
+  { id: 'info', icon: 'info', label: '查看画布信息', shortLabel: '信息' },
+  { id: 'diagnostics', icon: 'shield-check', label: '检查白板完整性', shortLabel: '检查' },
+  { id: 'copy-style', icon: 'paintbrush', label: '复制节点格式', shortLabel: '复制' },
+  { id: 'paste-style', icon: 'paintbrush-2', label: '粘贴节点格式', shortLabel: '粘贴' }
 ] as const;
 
 export default class CanvasStudioPlugin extends Plugin {
@@ -239,6 +239,7 @@ export default class CanvasStudioPlugin extends Plugin {
     button.setAttribute('aria-label', action.label);
     setTooltip(button, action.label, { placement: 'bottom' });
     setIcon(button, action.icon);
+    button.createSpan({ cls: 'canvas-studio-button-label', text: action.shortLabel });
     button.addEventListener('click', () => {
       switch (action.id) {
         case 'create-child': this.createChildNode(); break;
@@ -265,16 +266,11 @@ export default class CanvasStudioPlugin extends Plugin {
 
   private updateToolbarState(): void {
     if (!this.toolbar) return;
-    const nodeCount = this.toolbarCanvas ? selectedNodeData(this.toolbarCanvas).length : 0;
-    const edgeCount = this.toolbarCanvas ? selectedEdgeData(this.toolbarCanvas).length : 0;
+    const readonly = Boolean(this.toolbarCanvas?.readonly);
     for (const button of this.toolbar.querySelectorAll('button')) {
       const action = button.dataset.canvasStudioAction;
-      const enabled = action === 'layout' || action === 'import' || action === 'template'
-        || action === 'theme' || action === 'search' || action === 'export'
-        || action === 'present' || action === 'info'
-        || action === 'diagnostics'
-        || (action === 'edge' ? edgeCount > 0 : nodeCount > 0);
-      button.toggleAttribute('disabled', !enabled);
+      const readonlySafe = new Set(['layout', 'import', 'template', 'theme', 'search', 'export', 'present', 'info', 'diagnostics']);
+      button.toggleAttribute('disabled', readonly && !readonlySafe.has(action ?? ''));
     }
   }
 
@@ -591,6 +587,15 @@ export default class CanvasStudioPlugin extends Plugin {
     const canvas = this.currentCanvas();
     if (!canvas) return;
     const menu = new Menu();
+    menu.addItem((item) => item
+      .setTitle('整理选中连线')
+      .setIcon('wand-sparkles')
+      .onClick(() => this.alignEdges(false)));
+    menu.addItem((item) => item
+      .setTitle('整理全部连线')
+      .setIcon('route')
+      .onClick(() => this.alignEdges(true)));
+    menu.addSeparator();
     const styles: Array<[string, CanvasStyleAttributes, string]> = [
       ['贝塞尔曲线', { pathfindingMethod: null }, 'spline'],
       ['直线', { pathfindingMethod: 'direct' }, 'slash'],
@@ -815,6 +820,18 @@ export default class CanvasStudioPlugin extends Plugin {
       ...data,
       edges: data.edges.map((edge) => ids.has(edge.id) ? mergeEdgeStyle(edge, patch) : edge)
     });
+  }
+
+  private alignEdges(all: boolean): void {
+    const canvas = this.currentCanvas();
+    if (!canvas) return;
+    const selectedIds = new Set(selectedEdgeData(canvas).map((edge) => edge.id));
+    if (!all && selectedIds.size === 0) {
+      new Notice('请先选中至少一条连线，或选择“整理全部连线”。', 3000);
+      return;
+    }
+    replaceCanvasData(canvas, alignCanvasEdges(canvas.getData(), all ? undefined : selectedIds));
+    new Notice(all ? '已整理全部连线。' : `已整理 ${selectedIds.size} 条连线。`, 1800);
   }
 
   private copyStyle(): void {

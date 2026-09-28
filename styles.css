@@ -31,9 +31,24 @@
 }
 
 .canvas-studio-toolbar button {
-  width: 30px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  width: auto;
+  min-width: 30px;
   height: 30px;
-  padding: 0;
+  padding: 0 7px;
+  white-space: nowrap;
+}
+
+.canvas-studio-button-label {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.canvas-studio-toolbar button:hover .canvas-studio-button-label,
+.canvas-studio-toolbar button:focus-visible .canvas-studio-button-label {
+  color: var(--text-normal);
 }
 
 .canvas-studio-toolbar button.is-active {
@@ -224,6 +239,12 @@ body.is-mobile .canvas-studio-toolbar button {
   flex: 0 0 44px;
   width: 44px;
   height: 44px;
+  justify-content: center;
+  padding: 0;
+}
+
+body.is-mobile .canvas-studio-button-label {
+  display: none;
 }
 
 body.is-mobile .canvas-studio-search-modal,

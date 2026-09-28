@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.7.0 - 2026-09-28
+
+### Added
+
+- Chinese labels are visible in the Canvas Studio toolbar while tooltips remain
+  available for full descriptions.
+- Typography, style, arrange, and edge controls remain clickable without a
+  selection and explain the required selection in Chinese when needed.
+- Edge alignment commands choose cardinal anchors from node geometry and route
+  selected or all edges through Advanced Canvas square pathfinding.
+
+
 ## 0.6.0 - 2026-09-28
 
 ### Added

@@ -89,3 +89,32 @@ export function safeInsertionOrigin(
   const minY = Math.min(0, ...data.nodes.map((node) => node.y));
   return { x: maxX + (centered ? 420 : 160), y: minY };
 }
+
+export function alignCanvasEdges(
+  data: CanvasDocument,
+  edgeIds?: ReadonlySet<string>
+): CanvasDocument {
+  const nodes = new Map(data.nodes.map((node) => [node.id, node]));
+  const edges = data.edges.map((edge) => {
+    if (edgeIds && !edgeIds.has(edge.id)) return edge;
+    const from = nodes.get(edge.fromNode);
+    const to = nodes.get(edge.toNode);
+    if (!from || !to) return edge;
+    const fromCenter = { x: from.x + from.width / 2, y: from.y + from.height / 2 };
+    const toCenter = { x: to.x + to.width / 2, y: to.y + to.height / 2 };
+    const horizontal = Math.abs(toCenter.x - fromCenter.x) >= Math.abs(toCenter.y - fromCenter.y);
+    const forward = horizontal ? toCenter.x >= fromCenter.x : toCenter.y >= fromCenter.y;
+    const fromSide: CanvasEdgeData['fromSide'] = horizontal ? (forward ? 'right' : 'left') : (forward ? 'bottom' : 'top');
+    const toSide: CanvasEdgeData['toSide'] = horizontal ? (forward ? 'left' : 'right') : (forward ? 'top' : 'bottom');
+    return {
+      ...edge,
+      fromSide,
+      toSide,
+      styleAttributes: {
+        ...(edge.styleAttributes ?? {}),
+        pathfindingMethod: 'square'
+      }
+    };
+  });
+  return { ...data, edges };
+}

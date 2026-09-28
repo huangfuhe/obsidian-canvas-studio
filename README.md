@@ -43,6 +43,10 @@ The 0.6.x development build adds a read-only Canvas integrity checker for
 duplicate IDs, invalid edge references, cycles, overlapping nodes, and group
 overflow.
 
+The 0.7.x development build adds compact Chinese toolbar labels, keeps selection
+dependent menus available with Chinese guidance, and adds selected/all edge
+alignment with geometry-aware cardinal anchors and square routing.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual
