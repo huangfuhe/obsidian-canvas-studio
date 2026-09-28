@@ -22,6 +22,7 @@ import {
 import { arrangeNodes, type ArrangeMode } from './arrange';
 import { alignCanvasEdges, mergeEdgeStyle, mergeNodeStyle, safeInsertionOrigin, updateNodes } from './canvas-data';
 import { diagnoseCanvas, type CanvasHealthIssue } from './diagnostics';
+import { moveGroupChildren } from './group-follow';
 import { computeMindMapLayout, moveNodesToLayout } from './layout';
 import { outlineToCanvas, parseMarkdownOutline } from './outline';
 import { findCanvasMatches, replaceAllMatches, replaceCurrentMatch, type CanvasSearchMatch } from './search';
@@ -41,6 +42,7 @@ interface CanvasStudioSettings {
   smartSnap: boolean;
   snapGridSize: number;
   snapThreshold: number;
+  groupFollowChildren: boolean;
 }
 
 const DEFAULT_SETTINGS: CanvasStudioSettings = {
@@ -51,6 +53,7 @@ const DEFAULT_SETTINGS: CanvasStudioSettings = {
   smartSnap: true,
   snapGridSize: 20,
   snapThreshold: 12
+  ,groupFollowChildren: true
 };
 
 const TOOLBAR_ACTIONS = [
@@ -230,6 +233,10 @@ export default class CanvasStudioPlugin extends Plugin {
   }
 
   private handleNodeMoved(canvas: RuntimeCanvas, node: RuntimeCanvasNode): void {
+    if (this.settings.groupFollowChildren && node.getData().type === 'group' && node.prevX !== undefined && node.prevY !== undefined) {
+      const movedData = moveGroupChildren(canvas.getData(), node.id, { x: node.prevX, y: node.prevY }, { x: node.x, y: node.y });
+      if (movedData !== canvas.getData()) replaceCanvasData(canvas, movedData);
+    }
     if (!this.settings.smartSnap || this.snappingNodeIds.has(node.id) || canvas.readonly) return;
     const data = node.getData();
     const others = canvas.getData().nodes.filter((candidate) => candidate.id !== node.id);
@@ -1460,6 +1467,16 @@ class CanvasStudioSettingTab extends PluginSettingTab {
         .setValue(this.plugin.settings.smartSnap)
         .onChange(async (value) => {
           this.plugin.settings.smartSnap = value;
+          await this.plugin.saveSettings();
+        }));
+
+    new Setting(containerEl)
+      .setName('分组带动子节点')
+      .setDesc('移动分区或泳道时，自动带动其中的节点。')
+      .addToggle((toggle) => toggle
+        .setValue(this.plugin.settings.groupFollowChildren)
+        .onChange(async (value) => {
+          this.plugin.settings.groupFollowChildren = value;
           await this.plugin.saveSettings();
         }));
 

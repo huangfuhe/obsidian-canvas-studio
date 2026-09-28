@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.1 - 2026-09-28
+
+### Added
+
+- Moving a group/ swimlane moves contained text nodes by the same delta.
+- The behavior can be disabled with the `分组带动子节点` setting.
+
 ## 0.9.0 - 2026-09-28
 
 ### Added

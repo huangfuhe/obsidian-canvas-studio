@@ -15,6 +15,8 @@ export interface RuntimeCanvasNode {
   y: number;
   width: number;
   height: number;
+  prevX?: number;
+  prevY?: number;
   isEditing?: boolean;
   nodeEl?: HTMLElement;
   child?: {
