@@ -37,6 +37,7 @@ import { applyCanvasTheme, CANVAS_THEMES } from './themes';
 import { COMPONENT_LIBRARY, componentsByCategory, type ComponentSpec } from './components';
 import { createSavedComponent, instantiateSavedComponent, type SavedCanvasComponent } from './saved-components';
 import { filterMediaItems, mediaItemsFromPaths, type MediaKind, type MediaItem } from './media';
+import { clientPointToCanvas, parseCssTransform } from './canvas-position';
 import type { CanvasDocument, CanvasNodeData, CanvasStyleAttributes, LayoutDirection } from './types';
 
 interface CanvasStudioSettings {
@@ -92,6 +93,7 @@ const SECONDARY_TOOLBAR_ACTIONS = new Set<ToolbarActionId>([
 const READONLY_TOOLBAR_ACTIONS = new Set<ToolbarActionId | 'more'>([
   'search', 'export', 'present', 'info', 'diagnostics', 'more'
 ]);
+const COMPONENT_MIME = 'application/x-canvas-studio-component';
 
 export default class CanvasStudioPlugin extends Plugin {
   override settings: CanvasStudioSettings = DEFAULT_SETTINGS;
@@ -101,6 +103,12 @@ export default class CanvasStudioPlugin extends Plugin {
   private copiedStyle: CanvasStyleAttributes | null = null;
   private pendingTextSelection: TextSelectionSnapshot | null = null;
   private snappingNodeIds = new Set<string>();
+  private componentDropCanvas: RuntimeCanvas | null = null;
+  private componentDropHandlers: {
+    dragover: (event: DragEvent) => void;
+    dragleave: (event: DragEvent) => void;
+    drop: (event: DragEvent) => void;
+  } | null = null;
 
   override async onload(): Promise<void> {
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
@@ -316,6 +324,7 @@ export default class CanvasStudioPlugin extends Plugin {
       this.inspector.className = 'canvas-studio-inspector';
       this.inspector.setAttribute('aria-label', 'Canvas Studio 属性面板');
       canvas.wrapperEl.appendChild(this.inspector);
+      this.mountComponentDropTarget(canvas);
       this.syncCanvasThemeClass(canvas);
       for (const node of canvas.nodes.values()) this.applyTypography(node);
       this.updateToolbarState();
@@ -535,6 +544,7 @@ export default class CanvasStudioPlugin extends Plugin {
   }
 
   private unmountToolbar(): void {
+    this.unmountComponentDropTarget();
     if (this.toolbarCanvas?.wrapperEl) {
       this.toolbarCanvas.wrapperEl.classList.remove(...CANVAS_THEMES.map((theme) => theme.canvasClass));
     }
@@ -543,6 +553,56 @@ export default class CanvasStudioPlugin extends Plugin {
     this.toolbar = null;
     this.toolbarCanvas = null;
     this.inspector = null;
+  }
+
+  private mountComponentDropTarget(canvas: RuntimeCanvas): void {
+    const surface = canvas.wrapperEl;
+    if (!surface) return;
+    const dragover = (event: DragEvent) => {
+      if (canvas.readonly || !event.dataTransfer?.types.includes(COMPONENT_MIME)) return;
+      event.preventDefault();
+      event.dataTransfer.dropEffect = 'copy';
+      surface.classList.add('canvas-studio-component-drop-target');
+    };
+    const dragleave = (event: DragEvent) => {
+      const related = event.relatedTarget;
+      if (!(related instanceof Node) || !surface.contains(related)) surface.classList.remove('canvas-studio-component-drop-target');
+    };
+    const drop = (event: DragEvent) => {
+      surface.classList.remove('canvas-studio-component-drop-target');
+      if (canvas.readonly || !event.dataTransfer) return;
+      const componentId = event.dataTransfer.getData(COMPONENT_MIME);
+      if (!componentId) return;
+      event.preventDefault();
+      const component = this.availableComponents().find((candidate) => candidate.id === componentId);
+      if (!component) return;
+      this.insertComponentAt(component, this.componentDropPoint(canvas, event.clientX, event.clientY));
+    };
+    surface.addEventListener('dragover', dragover);
+    surface.addEventListener('dragleave', dragleave);
+    surface.addEventListener('drop', drop);
+    this.componentDropCanvas = canvas;
+    this.componentDropHandlers = { dragover, dragleave, drop };
+  }
+
+  private unmountComponentDropTarget(): void {
+    const surface = this.componentDropCanvas?.wrapperEl;
+    const handlers = this.componentDropHandlers;
+    if (surface && handlers) {
+      surface.removeEventListener('dragover', handlers.dragover);
+      surface.removeEventListener('dragleave', handlers.dragleave);
+      surface.removeEventListener('drop', handlers.drop);
+      surface.classList.remove('canvas-studio-component-drop-target');
+    }
+    this.componentDropCanvas = null;
+    this.componentDropHandlers = null;
+  }
+
+  private componentDropPoint(canvas: RuntimeCanvas, clientX: number, clientY: number): { x: number; y: number } {
+    const surface = canvas.canvasEl ?? canvas.wrapperEl;
+    if (!surface) return this.insertionOrigin(canvas, true);
+    const rect = surface.getBoundingClientRect();
+    return clientPointToCanvas(clientX, clientY, rect, parseCssTransform(window.getComputedStyle(surface).transform));
   }
 
   private currentCanvas(): RuntimeCanvas | null {
@@ -761,6 +821,10 @@ export default class CanvasStudioPlugin extends Plugin {
   private openComponentLibrary(): void {
     const canvas = this.currentCanvas();
     if (!canvas) return;
+    new ComponentLibraryModal(this.app, (component) => this.insertComponent(component), this.availableComponents(), () => this.openSaveComponent()).open();
+  }
+
+  private availableComponents(): ComponentSpec[] {
     const saved = this.settings.savedComponents.map((component) => ({
       id: component.id,
       name: component.name,
@@ -768,7 +832,7 @@ export default class CanvasStudioPlugin extends Plugin {
       description: `保存于本地的 ${component.nodes.length} 个节点组件。`,
       build: (origin: { x: number; y: number }, idFactory: (prefix: string) => string) => instantiateSavedComponent(component, origin, idFactory)
     }));
-    new ComponentLibraryModal(this.app, (component) => this.insertComponent(component), [...COMPONENT_LIBRARY, ...saved], () => this.openSaveComponent()).open();
+    return [...COMPONENT_LIBRARY, ...saved];
   }
 
   private openMediaLibrary(): void {
@@ -816,7 +880,13 @@ export default class CanvasStudioPlugin extends Plugin {
   private insertComponent(component: ComponentSpec): void {
     const canvas = this.currentCanvas();
     if (!canvas) return;
-    const fragment = component.build(this.insertionOrigin(canvas, true), randomId);
+    this.insertComponentAt(component, this.insertionOrigin(canvas, true));
+  }
+
+  private insertComponentAt(component: ComponentSpec, origin: { x: number; y: number }): void {
+    const canvas = this.currentCanvas();
+    if (!canvas || canvas.readonly) return;
+    const fragment = component.build(origin, randomId);
     this.insertDocument(canvas, fragment);
     new Notice(`已插入组件：${component.name}`, 1800);
   }
@@ -1457,11 +1527,16 @@ class ComponentLibraryModal extends Modal {
       this.contentEl.createEl('h3', { text: category, cls: 'canvas-studio-component-category' });
       const grid = this.contentEl.createDiv({ cls: 'canvas-studio-component-grid' });
       for (const component of components) {
-        const button = grid.createEl('button', { cls: 'canvas-studio-component-card' });
+        const button = grid.createEl('button', { cls: 'canvas-studio-component-card', attr: { draggable: 'true' } });
+        button.draggable = true;
         setIcon(button, component.id === 'button' ? 'square-mouse-pointer' : component.id === 'input' ? 'text-cursor-input' : component.id === 'tag' ? 'tag' : component.id === 'info-card' ? 'panel-top' : 'triangle-alert');
         button.createSpan({ cls: 'canvas-studio-component-name', text: component.name });
         button.createSpan({ cls: 'canvas-studio-component-description', text: component.description });
         setTooltip(button, component.description, { placement: 'top' });
+        button.addEventListener('dragstart', (event) => {
+          event.dataTransfer?.setData(COMPONENT_MIME, component.id);
+          if (event.dataTransfer) event.dataTransfer.effectAllowed = 'copy';
+        });
         button.addEventListener('click', () => {
           this.insert(component);
           this.close();

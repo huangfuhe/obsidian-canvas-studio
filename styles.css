@@ -23,6 +23,11 @@
   overflow-x: auto;
 }
 
+.canvas-wrapper.canvas-studio-component-drop-target {
+  outline: 2px dashed var(--interactive-accent);
+  outline-offset: -4px;
+}
+
 .canvas-studio-inspector {
   position: absolute;
   top: 72px;

@@ -83,6 +83,10 @@ The 0.9.5 development build adds native grouping and ungrouping from the
 arrangement menu. Grouping preserves selected node geometry and internal edges;
 ungrouping removes only the container.
 
+The 0.9.6 development build adds drag-and-drop insertion from the component
+library. The drop point follows the current Canvas viewport scale and creates
+the same native nodes as click insertion.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual
