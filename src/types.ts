@@ -13,6 +13,7 @@ export interface CanvasNodeData {
   width: number;
   height: number;
   color?: string;
+  locked?: boolean;
   text?: string;
   file?: string;
   url?: string;

@@ -70,6 +70,18 @@
   width: 100%;
 }
 
+.canvas-studio-inspector-field input[type='text'] {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.canvas-studio-inspector-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-normal);
+}
+
 .canvas-studio-inspector-segmented {
   display: flex;
   gap: 4px;

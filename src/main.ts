@@ -297,7 +297,7 @@ export default class CanvasStudioPlugin extends Plugin {
       return;
     }
     if (edges.length > 0) {
-      this.renderEdgeInspector(inspector, edges.length);
+      this.renderEdgeInspector(inspector, edges);
       return;
     }
     this.renderCanvasInspector(inspector, canvas);
@@ -347,19 +347,62 @@ export default class CanvasStudioPlugin extends Plugin {
     shape.value = typeof nodes[0]?.styleAttributes?.shape === 'string' ? nodes[0].styleAttributes.shape : '';
     shape.addEventListener('change', () => this.applyShape(shape.value || null));
 
+    const colorField = field('节点颜色');
+    const color = colorField.createEl('select');
+    for (const [value, label] of [['1', '红'], ['2', '橙'], ['3', '黄'], ['4', '绿'], ['5', '青'], ['6', '紫']] as const) {
+      color.createEl('option', { value, text: label });
+    }
+    color.value = typeof nodes[0]?.color === 'string' && /^[1-6]$/.test(nodes[0].color) ? nodes[0].color : '4';
+    color.addEventListener('change', () => this.applyNodeProperties({ color: color.value }));
+
+    const borderField = field('边框');
+    const border = borderField.createEl('select');
+    for (const [value, label] of [['solid', '实线'], ['dashed', '虚线'], ['dotted', '点线'], ['invisible', '隐藏']] as const) {
+      border.createEl('option', { value, text: label });
+    }
+    border.value = typeof nodes[0]?.styleAttributes?.border === 'string' ? nodes[0].styleAttributes.border : 'solid';
+    border.addEventListener('change', () => this.applyStyle({ border: border.value }));
+
+    const lockField = field('节点状态');
+    const lock = lockField.createEl('label', { cls: 'canvas-studio-inspector-check' });
+    const lockInput = lock.createEl('input', { type: 'checkbox', attr: { 'aria-label': '锁定节点' } });
+    lockInput.checked = nodes.every((node) => node.locked === true);
+    lock.createSpan({ text: '锁定选中节点' });
+    lockInput.addEventListener('change', () => this.applyNodeProperties({ locked: lockInput.checked }));
+
     const footer = container.createDiv({ cls: 'canvas-studio-inspector-footer' });
     const more = footer.createEl('button', { text: '更多字体设置', cls: 'mod-cta' });
     more.addEventListener('click', () => this.openStyleMenu(more));
   }
 
-  private renderEdgeInspector(container: HTMLElement, edgeCount: number): void {
-    this.renderInspectorHeader(container, '连线属性', `已选 ${edgeCount} 条连线`);
+  private renderEdgeInspector(container: HTMLElement, edges: ReturnType<typeof selectedEdgeData>): void {
+    this.renderInspectorHeader(container, '连线属性', `已选 ${edges.length} 条连线`);
     const field = container.createDiv({ cls: 'canvas-studio-inspector-field' });
     field.createEl('label', { text: '路由方式' });
     const route = field.createEl('select');
     for (const [value, label] of [['direct', '直线'], ['square', '直角'], ['a-star', '自动避障'], ['bezier', '贝塞尔']] as const) route.createEl('option', { value, text: label });
-    route.value = 'square';
+    const currentRoute = edges[0]?.styleAttributes?.pathfindingMethod;
+    route.value = typeof currentRoute === 'string' ? currentRoute : 'square';
     route.addEventListener('change', () => this.applyEdgeStyle({ pathfindingMethod: route.value }));
+
+    const colorField = container.createDiv({ cls: 'canvas-studio-inspector-field' });
+    colorField.createEl('label', { text: '连线颜色' });
+    const color = colorField.createEl('select');
+    for (const [value, label] of [['1', '红'], ['2', '橙'], ['3', '黄'], ['4', '绿'], ['5', '青'], ['6', '紫']] as const) color.createEl('option', { value, text: label });
+    color.value = typeof edges[0]?.color === 'string' && /^[1-6]$/.test(edges[0].color) ? edges[0].color : '5';
+    color.addEventListener('change', () => this.applyEdgeColor(color.value));
+
+    const arrowField = container.createDiv({ cls: 'canvas-studio-inspector-field' });
+    arrowField.createEl('label', { text: '终点箭头' });
+    const arrow = arrowField.createEl('select');
+    for (const [value, label] of [['arrow', '三角箭头'], ['none', '无箭头'], ['diamond', '菱形'], ['circle', '圆形']] as const) arrow.createEl('option', { value, text: label });
+    arrow.value = typeof edges[0]?.styleAttributes?.arrow === 'string' ? edges[0].styleAttributes.arrow : 'arrow';
+    arrow.addEventListener('change', () => this.applyEdgeStyle({ ...(arrow.value === 'arrow' || arrow.value === 'none' ? { toEnd: arrow.value } : { arrow: arrow.value }) }));
+
+    const labelField = container.createDiv({ cls: 'canvas-studio-inspector-field' });
+    labelField.createEl('label', { text: '连线标签' });
+    const label = labelField.createEl('input', { type: 'text', value: edges[0]?.label ?? '', attr: { placeholder: '例如：是 / 否' } });
+    label.addEventListener('change', () => this.applyEdgeLabel(label.value));
     const footer = container.createDiv({ cls: 'canvas-studio-inspector-footer' });
     const align = footer.createEl('button', { text: '整理选中连线', cls: 'mod-cta' });
     align.addEventListener('click', () => this.alignEdges(false));
@@ -903,6 +946,34 @@ export default class CanvasStudioPlugin extends Plugin {
       const node = canvas.nodes.get(id);
       if (node) this.applyTypography(node);
     }
+  }
+
+  private applyNodeProperties(patch: Pick<CanvasNodeData, 'color' | 'locked'>): void {
+    const canvas = this.currentCanvas();
+    if (!canvas) return;
+    const ids = new Set(this.selection(canvas).map((node) => node.id));
+    if (ids.size === 0) return;
+    replaceCanvasData(canvas, updateNodes(canvas.getData(), ids, (node) => ({ ...node, ...patch })));
+  }
+
+  private applyEdgeColor(color: string): void {
+    const canvas = this.currentCanvas();
+    if (!canvas) return;
+    const ids = new Set(selectedEdgeData(canvas).map((edge) => edge.id));
+    replaceCanvasData(canvas, {
+      ...canvas.getData(),
+      edges: canvas.getData().edges.map((edge) => ids.has(edge.id) ? { ...edge, color } : edge)
+    });
+  }
+
+  private applyEdgeLabel(label: string): void {
+    const canvas = this.currentCanvas();
+    if (!canvas) return;
+    const ids = new Set(selectedEdgeData(canvas).map((edge) => edge.id));
+    replaceCanvasData(canvas, {
+      ...canvas.getData(),
+      edges: canvas.getData().edges.map((edge) => ids.has(edge.id) ? { ...edge, label: label || undefined } : edge)
+    });
   }
 
   private applyShape(shape: string | null): void {
