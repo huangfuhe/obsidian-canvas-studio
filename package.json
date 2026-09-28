@@ -1,0 +1,31 @@
+{
+  "name": "canvas-studio",
+  "version": "0.6.0",
+  "private": true,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/huangfuhe/obsidian-canvas-studio.git"
+  },
+  "homepage": "https://github.com/huangfuhe/obsidian-canvas-studio#readme",
+  "bugs": {
+    "url": "https://github.com/huangfuhe/obsidian-canvas-studio/issues"
+  },
+  "type": "module",
+  "scripts": {
+    "build": "node esbuild.config.mjs production",
+    "dev": "node esbuild.config.mjs",
+    "release:check": "node scripts/release-check.mjs",
+    "release:package": "npm run build && node scripts/package-release.mjs",
+    "test": "tsx --test tests/*.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "esbuild": "^0.25.0",
+    "mdast-util-from-markdown": "^2.0.2",
+    "obsidian": "^1.13.1",
+    "tsx": "^4.19.0",
+    "typescript": "^5.8.0"
+  }
+}

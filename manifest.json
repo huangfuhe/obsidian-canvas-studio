@@ -1,0 +1,9 @@
+{
+  "id": "canvas-studio",
+  "name": "Canvas Studio",
+  "version": "0.6.0",
+  "minAppVersion": "1.13.0",
+  "description": "Native Canvas tools for mind maps, flowcharts, swimlanes, themes, diagnostics, typography, search, layout, and export.",
+  "author": "Mi",
+  "isDesktopOnly": false
+}
