@@ -4,8 +4,8 @@ import { COMPONENT_LIBRARY, componentsByCategory } from '../src/components';
 
 test('component library has categorized native Canvas components', () => {
   const categories = componentsByCategory();
-  assert.equal(COMPONENT_LIBRARY.length, 5);
-  assert.equal(categories.get('常用组件')?.length, 3);
+  assert.equal(COMPONENT_LIBRARY.length, 6);
+  assert.equal(categories.get('常用组件')?.length, 4);
   assert.equal(categories.get('容器组件')?.length, 2);
   for (const component of COMPONENT_LIBRARY) {
     let index = 0;

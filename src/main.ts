@@ -66,6 +66,7 @@ const TOOLBAR_ACTIONS = [
   { id: 'import', icon: 'list-tree', label: '导入 Markdown 大纲', shortLabel: '导入' },
   { id: 'template', icon: 'layout-template', label: '流程图与泳道模板', shortLabel: '模板' },
   { id: 'components', icon: 'blocks', label: '常用组件库', shortLabel: '组件' },
+  { id: 'media', icon: 'image-plus', label: '插入媒体或文件', shortLabel: '媒体' },
   { id: 'arrange', icon: 'align-horizontal-distribute-center', label: '节点对齐与分布', shortLabel: '排版' },
   { id: 'shape', icon: 'shapes', label: '设置流程图形状', shortLabel: '形状' },
   { id: 'edge', icon: 'git-commit-horizontal', label: '连线样式与自动整理', shortLabel: '连线' },
@@ -327,6 +328,7 @@ export default class CanvasStudioPlugin extends Plugin {
         case 'import': this.openOutlineImport(); break;
         case 'template': this.openTemplateMenu(button); break;
         case 'components': this.openComponentLibrary(); break;
+        case 'media': this.runAdvancedCommand('advanced-canvas:create-file-node'); break;
         case 'arrange': this.openArrangeMenu(button); break;
         case 'shape': this.openShapeMenu(button); break;
         case 'edge': this.openEdgeMenu(button); break;
@@ -349,7 +351,7 @@ export default class CanvasStudioPlugin extends Plugin {
     const readonly = Boolean(this.toolbarCanvas?.readonly);
     for (const button of this.toolbar.querySelectorAll('button')) {
       const action = button.dataset.canvasStudioAction;
-      const readonlySafe = new Set(['layout', 'import', 'template', 'components', 'theme', 'search', 'export', 'present', 'info', 'diagnostics']);
+      const readonlySafe = new Set(['layout', 'import', 'template', 'components', 'media', 'theme', 'search', 'export', 'present', 'info', 'diagnostics']);
       button.toggleAttribute('disabled', readonly && !readonlySafe.has(action ?? ''));
     }
     this.updateInspector();

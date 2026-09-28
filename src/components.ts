@@ -79,6 +79,35 @@ export const COMPONENT_LIBRARY: ComponentSpec[] = [
     })
   },
   {
+    id: 'table',
+    name: '表格',
+    category: '常用组件',
+    description: '用原生分组和文本节点组成可编辑表格。',
+    build: (origin, idFactory) => {
+      const columns = 3;
+      const rows = 4;
+      const cellWidth = 150;
+      const cellHeight = 54;
+      const nodes: CanvasNodeData[] = [groupNode(idFactory('group'), '表格', origin.x, origin.y, columns * cellWidth, rows * cellHeight, '5')];
+      for (let row = 0; row < rows; row += 1) {
+        for (let column = 0; column < columns; column += 1) {
+          const isHeader = row === 0;
+          nodes.push(textNode(
+            idFactory('node'),
+            isHeader ? `列 ${column + 1}` : `单元格 ${row}-${column + 1}`,
+            origin.x + column * cellWidth + 8,
+            origin.y + row * cellHeight + 8,
+            cellWidth - 16,
+            cellHeight - 16,
+            { shape: 'rectangle', textAlign: 'center', padding: 8, fontSize: isHeader ? 15 : 14, fontWeight: isHeader ? 700 : 400 },
+            isHeader ? '5' : undefined
+          ));
+        }
+      }
+      return { nodes, edges: [] };
+    }
+  },
+  {
     id: 'info-card',
     name: '信息卡片',
     category: '容器组件',

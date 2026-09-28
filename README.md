@@ -67,6 +67,9 @@ matching the expected container behavior of a whiteboard editor.
 The 0.9.2 development build adds local saved components: select nodes, save a
 named component, and insert fresh copies from the `我的组件` library category.
 
+The 0.9.3 development build adds a native editable table component and a media
+insertion entry backed by Advanced Canvas file nodes.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual

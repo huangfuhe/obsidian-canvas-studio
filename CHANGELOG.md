@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.3 - 2026-09-28
+
+### Added
+
+- Native editable table component built from one group and text cell nodes.
+- Media/file toolbar entry backed by Advanced Canvas file-node creation.
+
 ## 0.9.2 - 2026-09-28
 
 ### Added
