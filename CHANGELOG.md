@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.7.1 - 2026-09-28
+
+### Fixed
+
+- Typography actions now preserve the CodeMirror text selection before the
+  toolbar receives focus.
+- Font family, font size, color, underline, and line height can be applied to
+  selected text using inline HTML in the same Canvas text node.
+- Bold and italic selections use Markdown emphasis markers.
+- Unsaved editor text is preserved when applying a local text style.
+
+
 ## 0.7.0 - 2026-09-28
 
 ### Added

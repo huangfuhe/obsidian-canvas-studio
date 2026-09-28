@@ -17,6 +17,16 @@ export interface RuntimeCanvasNode {
   height: number;
   isEditing?: boolean;
   nodeEl?: HTMLElement;
+  child?: {
+    editMode?: {
+      cm?: {
+        state?: {
+          doc?: { toString(): string };
+          selection?: { main?: { from: number; to: number } };
+        };
+      };
+    };
+  };
   getData(): CanvasNodeData;
   setData(data: CanvasNodeData, addHistory?: boolean): void;
   startEditing?(): void;

@@ -25,6 +25,7 @@ import { diagnoseCanvas, type CanvasHealthIssue } from './diagnostics';
 import { computeMindMapLayout, moveNodesToLayout } from './layout';
 import { outlineToCanvas, parseMarkdownOutline } from './outline';
 import { findCanvasMatches, replaceAllMatches, replaceCurrentMatch, type CanvasSearchMatch } from './search';
+import { markdownTextSelection, styleTextSelection, type TextSelectionSnapshot } from './rich-text';
 import { instantiateSwimlane, SWIMLANE_TEMPLATES } from './swimlane';
 import { FLOW_TEMPLATES, instantiateFlowTemplate } from './templates';
 import { applyCanvasTheme, CANVAS_THEMES } from './themes';
@@ -69,6 +70,7 @@ export default class CanvasStudioPlugin extends Plugin {
   private toolbar: HTMLElement | null = null;
   private toolbarCanvas: RuntimeCanvas | null = null;
   private copiedStyle: CanvasStyleAttributes | null = null;
+  private pendingTextSelection: TextSelectionSnapshot | null = null;
 
   override async onload(): Promise<void> {
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
@@ -240,6 +242,9 @@ export default class CanvasStudioPlugin extends Plugin {
     setTooltip(button, action.label, { placement: 'bottom' });
     setIcon(button, action.icon);
     button.createSpan({ cls: 'canvas-studio-button-label', text: action.shortLabel });
+    button.addEventListener('pointerdown', () => {
+      if (action.id === 'style') this.captureTextSelection();
+    });
     button.addEventListener('click', () => {
       switch (action.id) {
         case 'create-child': this.createChildNode(); break;
@@ -657,6 +662,23 @@ export default class CanvasStudioPlugin extends Plugin {
     menu.showAtPosition(this.menuPosition(anchor));
   }
 
+  private captureTextSelection(): void {
+    this.pendingTextSelection = null;
+    const canvas = getCurrentCanvas(this.app);
+    if (!canvas) return;
+    const [node] = selectedRuntimeNodes(canvas);
+    const editorState = node?.child?.editMode?.cm?.state;
+    const range = editorState?.selection?.main;
+    const sourceText = editorState?.doc?.toString();
+    if (!node?.isEditing || !range || typeof sourceText !== 'string' || range.to <= range.from) return;
+    this.pendingTextSelection = {
+      nodeId: node.id,
+      from: range.from,
+      to: range.to,
+      sourceText
+    };
+  }
+
   private menuPosition(anchor: HTMLElement): { x: number; y: number } {
     const rect = anchor.getBoundingClientRect();
     return { x: rect.left, y: rect.bottom + 4 };
@@ -755,6 +777,23 @@ export default class CanvasStudioPlugin extends Plugin {
   private applyStyle(patch: CanvasStyleAttributes): void {
     const canvas = this.currentCanvas();
     if (!canvas) return;
+    const textSelection = this.pendingTextSelection;
+    this.pendingTextSelection = null;
+    if (textSelection) {
+      const node = canvas.getData().nodes.find((item) => item.id === textSelection.nodeId);
+      if (node) {
+        const marker = patch.fontWeight === 700 ? '**' : patch.fontStyle === 'italic' ? '*' : patch.textDecoration === 'underline' ? null : undefined;
+        const styledText = marker
+          ? markdownTextSelection(textSelection.sourceText, textSelection.from, textSelection.to, marker)
+          : styleTextSelection(textSelection.sourceText, textSelection.from, textSelection.to, patch);
+        if (styledText) {
+          const nextData = updateNodes(canvas.getData(), new Set([node.id]), (item) => ({ ...item, text: styledText }));
+          replaceCanvasData(canvas, nextData);
+          new Notice('已将字体样式应用到选中文字。', 1800);
+          return;
+        }
+      }
+    }
     const ids = new Set(this.selection(canvas).map((node) => node.id));
     if (ids.size === 0) {
       new Notice('请选择至少一个节点。', 2500);

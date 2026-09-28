@@ -47,6 +47,9 @@ The 0.7.x development build adds compact Chinese toolbar labels, keeps selection
 dependent menus available with Chinese guidance, and adds selected/all edge
 alignment with geometry-aware cardinal anchors and square routing.
 
+The 0.7.1 patch preserves text selections before toolbar focus changes and
+applies typography to the selected text range instead of the entire card.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual
