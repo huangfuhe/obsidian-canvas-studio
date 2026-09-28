@@ -50,6 +50,10 @@ alignment with geometry-aware cardinal anchors and square routing.
 The 0.7.1 patch preserves text selections before toolbar focus changes and
 applies typography to the selected text range instead of the entire card.
 
+The 0.8.x development build adds a contextual property inspector: canvas state
+when nothing is selected, node properties for selected nodes, and routing
+properties for selected edges.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual

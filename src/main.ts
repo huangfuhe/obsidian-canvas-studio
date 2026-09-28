@@ -68,6 +68,7 @@ const TOOLBAR_ACTIONS = [
 export default class CanvasStudioPlugin extends Plugin {
   override settings: CanvasStudioSettings = DEFAULT_SETTINGS;
   private toolbar: HTMLElement | null = null;
+  private inspector: HTMLElement | null = null;
   private toolbarCanvas: RuntimeCanvas | null = null;
   private copiedStyle: CanvasStyleAttributes | null = null;
   private pendingTextSelection: TextSelectionSnapshot | null = null;
@@ -226,6 +227,10 @@ export default class CanvasStudioPlugin extends Plugin {
       this.toolbar.setAttribute('aria-label', 'Canvas Studio 工具栏');
       for (const action of TOOLBAR_ACTIONS) this.addToolbarButton(action);
       canvas.wrapperEl.appendChild(this.toolbar);
+      this.inspector = document.createElement('aside');
+      this.inspector.className = 'canvas-studio-inspector';
+      this.inspector.setAttribute('aria-label', 'Canvas Studio 属性面板');
+      canvas.wrapperEl.appendChild(this.inspector);
       this.syncCanvasThemeClass(canvas);
       for (const node of canvas.nodes.values()) this.applyTypography(node);
       this.updateToolbarState();
@@ -277,6 +282,97 @@ export default class CanvasStudioPlugin extends Plugin {
       const readonlySafe = new Set(['layout', 'import', 'template', 'theme', 'search', 'export', 'present', 'info', 'diagnostics']);
       button.toggleAttribute('disabled', readonly && !readonlySafe.has(action ?? ''));
     }
+    this.updateInspector();
+  }
+
+  private updateInspector(): void {
+    const inspector = this.inspector;
+    const canvas = this.toolbarCanvas;
+    if (!inspector || !canvas) return;
+    inspector.empty();
+    const nodes = selectedNodeData(canvas);
+    const edges = selectedEdgeData(canvas);
+    if (nodes.length > 0) {
+      this.renderNodeInspector(inspector, nodes);
+      return;
+    }
+    if (edges.length > 0) {
+      this.renderEdgeInspector(inspector, edges.length);
+      return;
+    }
+    this.renderCanvasInspector(inspector, canvas);
+  }
+
+  private renderInspectorHeader(container: HTMLElement, title: string, detail: string): void {
+    const header = container.createDiv({ cls: 'canvas-studio-inspector-header' });
+    header.createDiv({ cls: 'canvas-studio-inspector-title', text: title });
+    header.createDiv({ cls: 'canvas-studio-inspector-detail', text: detail });
+  }
+
+  private renderNodeInspector(container: HTMLElement, nodes: CanvasNodeData[]): void {
+    this.renderInspectorHeader(container, '节点属性', `已选 ${nodes.length} 个节点`);
+    const field = (label: string) => {
+      const element = container.createDiv({ cls: 'canvas-studio-inspector-field' });
+      element.createEl('label', { text: label });
+      return element;
+    };
+    const sizeField = field('字号');
+    const size = sizeField.createEl('select');
+    for (const value of [12, 14, 16, 18, 20, 24, 32]) size.createEl('option', { value: String(value), text: `${value}px` });
+    size.value = typeof nodes[0]?.styleAttributes?.fontSize === 'number' ? String(nodes[0].styleAttributes.fontSize) : '16';
+    size.addEventListener('change', () => this.applyStyle({ fontSize: Number(size.value) }));
+
+    const familyField = field('字体');
+    const family = familyField.createEl('select');
+    for (const [value, label] of [['sans-serif', '无衬线'], ['serif', '衬线'], ['monospace', '等宽'], ['var(--font-interface)', '界面字体']] as const) {
+      family.createEl('option', { value, text: label });
+    }
+    family.value = typeof nodes[0]?.styleAttributes?.fontFamily === 'string' ? nodes[0].styleAttributes.fontFamily : 'sans-serif';
+    family.addEventListener('change', () => this.applyStyle({ fontFamily: family.value }));
+
+    const alignField = field('对齐');
+    const align = alignField.createDiv({ cls: 'canvas-studio-inspector-segmented' });
+    for (const [value, label, icon] of [['left', '左', 'align-left'], ['center', '中', 'align-center'], ['right', '右', 'align-right']] as const) {
+      const button = align.createEl('button', { cls: 'clickable-icon', attr: { 'aria-label': `${label}对齐` } });
+      setIcon(button, icon);
+      setTooltip(button, `${label}对齐`, { placement: 'top' });
+      button.addEventListener('click', () => this.applyStyle({ textAlign: value }));
+    }
+
+    const shapeField = field('形状');
+    const shape = shapeField.createEl('select');
+    for (const [value, label] of [['', '矩形'], ['pill', '胶囊'], ['diamond', '判断'], ['parallelogram', '输入输出'], ['document', '文档'], ['database', '数据库']] as const) {
+      shape.createEl('option', { value, text: label });
+    }
+    shape.value = typeof nodes[0]?.styleAttributes?.shape === 'string' ? nodes[0].styleAttributes.shape : '';
+    shape.addEventListener('change', () => this.applyShape(shape.value || null));
+
+    const footer = container.createDiv({ cls: 'canvas-studio-inspector-footer' });
+    const more = footer.createEl('button', { text: '更多字体设置', cls: 'mod-cta' });
+    more.addEventListener('click', () => this.openStyleMenu(more));
+  }
+
+  private renderEdgeInspector(container: HTMLElement, edgeCount: number): void {
+    this.renderInspectorHeader(container, '连线属性', `已选 ${edgeCount} 条连线`);
+    const field = container.createDiv({ cls: 'canvas-studio-inspector-field' });
+    field.createEl('label', { text: '路由方式' });
+    const route = field.createEl('select');
+    for (const [value, label] of [['direct', '直线'], ['square', '直角'], ['a-star', '自动避障'], ['bezier', '贝塞尔']] as const) route.createEl('option', { value, text: label });
+    route.value = 'square';
+    route.addEventListener('change', () => this.applyEdgeStyle({ pathfindingMethod: route.value }));
+    const footer = container.createDiv({ cls: 'canvas-studio-inspector-footer' });
+    const align = footer.createEl('button', { text: '整理选中连线', cls: 'mod-cta' });
+    align.addEventListener('click', () => this.alignEdges(false));
+  }
+
+  private renderCanvasInspector(container: HTMLElement, canvas: RuntimeCanvas): void {
+    this.renderInspectorHeader(container, '画布属性', '未选择对象');
+    const data = canvas.getData();
+    const summary = container.createDiv({ cls: 'canvas-studio-inspector-summary' });
+    summary.createDiv({ text: `节点 ${data.nodes.length}` });
+    summary.createDiv({ text: `连线 ${data.edges.length}` });
+    summary.createDiv({ text: `分区 ${data.nodes.filter((node) => node.type === 'group').length}` });
+    summary.createDiv({ text: '选择对象后显示上下文属性' });
   }
 
   private unmountToolbar(): void {
@@ -284,8 +380,10 @@ export default class CanvasStudioPlugin extends Plugin {
       this.toolbarCanvas.wrapperEl.classList.remove(...CANVAS_THEMES.map((theme) => theme.canvasClass));
     }
     this.toolbar?.remove();
+    this.inspector?.remove();
     this.toolbar = null;
     this.toolbarCanvas = null;
+    this.inspector = null;
   }
 
   private currentCanvas(): RuntimeCanvas | null {

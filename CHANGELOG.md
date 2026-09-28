@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.8.0 - 2026-09-28
+
+### Added
+
+- Contextual right-side inspector for canvas, node, and edge selection states.
+- Node inspector controls for font size, font family, alignment, and shape.
+- Edge inspector controls for routing and selected-edge alignment.
+- Canvas summary in the empty-selection inspector state.
+
+### Direction
+
+- The toolbar remains a compact command surface; object-specific properties now
+  live in the inspector, matching the interaction model of full whiteboard apps.
+
+
 ## 0.7.1 - 2026-09-28
 
 ### Fixed
