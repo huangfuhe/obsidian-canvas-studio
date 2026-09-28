@@ -124,6 +124,11 @@ export function replaceCanvasData(canvas: RuntimeCanvas, data: CanvasDocument): 
         canvas.pushHistory?.(pending.previous);
       }
       canvas.pushHistory?.(finalData);
+      while (history.current > 0
+        && JSON.stringify(history.data[history.current]) === JSON.stringify(history.data[history.current - 1])) {
+        history.data.splice(history.current, 1);
+        history.current -= 1;
+      }
       if (final) pendingHistoryCommits.delete(canvas);
     };
     pending.timers = [
