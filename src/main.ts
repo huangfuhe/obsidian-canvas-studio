@@ -84,6 +84,14 @@ const TOOLBAR_ACTIONS = [
   { id: 'paste-style', icon: 'paintbrush-2', label: '粘贴节点格式', shortLabel: '粘贴' }
 ] as const;
 
+type ToolbarActionId = typeof TOOLBAR_ACTIONS[number]['id'];
+const SECONDARY_TOOLBAR_ACTIONS = new Set<ToolbarActionId>([
+  'theme', 'search', 'export', 'present', 'info', 'diagnostics', 'copy-style', 'paste-style'
+]);
+const READONLY_TOOLBAR_ACTIONS = new Set<ToolbarActionId | 'more'>([
+  'search', 'export', 'present', 'info', 'diagnostics', 'more'
+]);
+
 export default class CanvasStudioPlugin extends Plugin {
   override settings: CanvasStudioSettings = DEFAULT_SETTINGS;
   private toolbar: HTMLElement | null = null;
@@ -298,7 +306,10 @@ export default class CanvasStudioPlugin extends Plugin {
       this.toolbar = document.createElement('div');
       this.toolbar.className = 'canvas-studio-toolbar';
       this.toolbar.setAttribute('aria-label', 'Canvas Studio 工具栏');
-      for (const action of TOOLBAR_ACTIONS) this.addToolbarButton(action);
+      for (const action of TOOLBAR_ACTIONS) {
+        if (!SECONDARY_TOOLBAR_ACTIONS.has(action.id)) this.addToolbarButton(action);
+      }
+      this.addMoreToolbarButton();
       canvas.wrapperEl.appendChild(this.toolbar);
       this.inspector = document.createElement('aside');
       this.inspector.className = 'canvas-studio-inspector';
@@ -323,30 +334,46 @@ export default class CanvasStudioPlugin extends Plugin {
     button.addEventListener('pointerdown', () => {
       if (action.id === 'style') this.captureTextSelection();
     });
-    button.addEventListener('click', () => {
-      switch (action.id) {
-        case 'create-child': this.createChildNode(); break;
-        case 'create-sibling': this.createSiblingNode(); break;
-        case 'layout': this.layoutMindMap(); break;
-        case 'import': this.openOutlineImport(); break;
-        case 'template': this.openTemplateMenu(button); break;
-        case 'components': this.openComponentLibrary(); break;
-        case 'media': this.openMediaLibrary(); break;
-        case 'arrange': this.openArrangeMenu(button); break;
-        case 'shape': this.openShapeMenu(button); break;
-        case 'edge': this.openEdgeMenu(button); break;
-        case 'style': this.openStyleMenu(button); break;
-        case 'theme': this.openThemeMenu(button); break;
-        case 'search': this.openSearch(); break;
-        case 'export': this.openExportMenu(button); break;
-        case 'present': this.runAdvancedCommand('advanced-canvas:start-presentation'); break;
-        case 'info': this.openCanvasInfo(); break;
-        case 'diagnostics': this.openDiagnostics(); break;
-        case 'copy-style': this.copyStyle(); break;
-        case 'paste-style': this.pasteStyle(); break;
-      }
-    });
+    button.addEventListener('click', () => this.handleToolbarAction(action.id, button));
     this.toolbar.appendChild(button);
+  }
+
+  private addMoreToolbarButton(): void {
+    if (!this.toolbar) return;
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'clickable-icon canvas-studio-more-button';
+    button.dataset.canvasStudioAction = 'more';
+    button.setAttribute('aria-label', '更多白板工具');
+    setTooltip(button, '更多白板工具', { placement: 'bottom' });
+    setIcon(button, 'ellipsis');
+    button.createSpan({ cls: 'canvas-studio-button-label', text: '更多' });
+    button.addEventListener('click', () => this.openMoreMenu(button));
+    this.toolbar.appendChild(button);
+  }
+
+  private handleToolbarAction(actionId: ToolbarActionId, anchor: HTMLElement): void {
+    switch (actionId) {
+      case 'create-child': this.createChildNode(); break;
+      case 'create-sibling': this.createSiblingNode(); break;
+      case 'layout': this.layoutMindMap(); break;
+      case 'import': this.openOutlineImport(); break;
+      case 'template': this.openTemplateMenu(anchor); break;
+      case 'components': this.openComponentLibrary(); break;
+      case 'media': this.openMediaLibrary(); break;
+      case 'arrange': this.openArrangeMenu(anchor); break;
+      case 'shape': this.openShapeMenu(anchor); break;
+      case 'edge': this.openEdgeMenu(anchor); break;
+      case 'style': this.openStyleMenu(anchor); break;
+      case 'theme': this.openThemeMenu(anchor); break;
+      case 'search': this.openSearch(); break;
+      case 'export': this.openExportMenu(anchor); break;
+      case 'present': this.runAdvancedCommand('advanced-canvas:start-presentation'); break;
+      case 'info': this.openCanvasInfo(); break;
+      case 'diagnostics': this.openDiagnostics(); break;
+      case 'copy-style': this.copyStyle(); break;
+      case 'paste-style': this.pasteStyle(); break;
+    }
   }
 
   private updateToolbarState(): void {
@@ -354,8 +381,7 @@ export default class CanvasStudioPlugin extends Plugin {
     const readonly = Boolean(this.toolbarCanvas?.readonly);
     for (const button of this.toolbar.querySelectorAll('button')) {
       const action = button.dataset.canvasStudioAction;
-      const readonlySafe = new Set(['layout', 'import', 'template', 'components', 'theme', 'search', 'export', 'present', 'info', 'diagnostics']);
-      button.toggleAttribute('disabled', readonly && !readonlySafe.has(action ?? ''));
+      button.toggleAttribute('disabled', readonly && !READONLY_TOOLBAR_ACTIONS.has((action ?? '') as ToolbarActionId | 'more'));
     }
     this.updateInspector();
   }
@@ -710,6 +736,20 @@ export default class CanvasStudioPlugin extends Plugin {
         .setTitle(template.name)
         .setIcon('columns-3')
         .onClick(() => this.insertSwimlane(template.id)));
+    }
+    menu.showAtPosition(this.menuPosition(anchor));
+  }
+
+  private openMoreMenu(anchor: HTMLElement): void {
+    const menu = new Menu();
+    const readonly = Boolean(this.toolbarCanvas?.readonly);
+    for (const action of TOOLBAR_ACTIONS) {
+      if (!SECONDARY_TOOLBAR_ACTIONS.has(action.id)) continue;
+      if (readonly && !READONLY_TOOLBAR_ACTIONS.has(action.id)) continue;
+      menu.addItem((item) => item
+        .setTitle(action.label)
+        .setIcon(action.icon)
+        .onClick(() => this.handleToolbarAction(action.id, anchor)));
     }
     menu.showAtPosition(this.menuPosition(anchor));
   }

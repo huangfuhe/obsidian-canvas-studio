@@ -76,6 +76,9 @@ The 0.9.4 development build adds group and swimlane auto-fit: select a group
 and use the inspector action to resize it to the bounds of its contained nodes
 without moving those nodes.
 
+The same release groups low-frequency commands under a Chinese-labeled “更多”
+menu and keeps write actions unavailable while a Canvas is read-only.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual

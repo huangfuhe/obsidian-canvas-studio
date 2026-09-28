@@ -143,6 +143,12 @@
   background: var(--background-modifier-border);
 }
 
+.canvas-studio-more-button {
+  border-left: 1px solid var(--background-modifier-border);
+  margin-left: 2px;
+  padding-left: 9px;
+}
+
 .canvas-studio-toolbar button {
   display: inline-flex;
   align-items: center;
