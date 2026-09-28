@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.9.0 - 2026-09-28
+
+### Added
+
+- Local component library with buttons, input fields, tags, information cards,
+  and alert cards.
+- Component categories and native Canvas insertion from the library modal.
+- Component insertion uses standard `text` and `group` nodes and one undoable
+  Canvas transaction.
+
+
 ## 0.8.0 - 2026-09-28
 
 ### Added

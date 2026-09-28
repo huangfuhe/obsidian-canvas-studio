@@ -57,6 +57,10 @@ properties for selected edges.
 It also adds smart snapping to a configurable grid and nearby node guides when
 nodes are moved.
 
+The 0.9.x development build adds a local component library for reusable
+buttons, input fields, tags, information cards, and alert cards. Components are
+inserted as native Canvas nodes; no component content sidecar is created.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual
