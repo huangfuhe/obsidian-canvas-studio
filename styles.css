@@ -28,6 +28,19 @@
   outline-offset: -4px;
 }
 
+.canvas-studio-component-drop-preview {
+  position: fixed;
+  z-index: 1000;
+  pointer-events: none;
+  padding: 6px 10px;
+  border: 1px solid var(--interactive-accent);
+  border-radius: 6px;
+  background: var(--background-primary);
+  box-shadow: var(--shadow-s);
+  color: var(--text-normal);
+  font-size: var(--font-ui-smaller);
+}
+
 .canvas-studio-inspector {
   position: absolute;
   top: 72px;

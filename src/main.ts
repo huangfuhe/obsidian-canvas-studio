@@ -104,11 +104,7 @@ export default class CanvasStudioPlugin extends Plugin {
   private pendingTextSelection: TextSelectionSnapshot | null = null;
   private snappingNodeIds = new Set<string>();
   private componentDropCanvas: RuntimeCanvas | null = null;
-  private componentDropHandlers: {
-    dragover: (event: DragEvent) => void;
-    dragleave: (event: DragEvent) => void;
-    drop: (event: DragEvent) => void;
-  } | null = null;
+  private componentDropPreview: HTMLElement | null = null;
 
   override async onload(): Promise<void> {
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
@@ -207,6 +203,9 @@ export default class CanvasStudioPlugin extends Plugin {
     });
 
     this.registerDomEvent(document, 'keydown', (event) => this.handleKeydown(event));
+    this.registerDomEvent(document, 'dragover', (event) => this.handleComponentDragOver(event));
+    this.registerDomEvent(document, 'drop', (event) => this.handleComponentDrop(event));
+    this.registerDomEvent(document, 'dragend', () => this.clearComponentDropPreview());
     this.registerEvent(this.app.workspace.on('layout-change', () => this.refreshToolbar()));
     this.registerEvent(this.app.workspace.on('active-leaf-change', () => this.refreshToolbar()));
     this.registerEvent(this.app.workspace.on('advanced-canvas:canvas-changed' as never, () => this.refreshToolbar()));
@@ -556,46 +555,52 @@ export default class CanvasStudioPlugin extends Plugin {
   }
 
   private mountComponentDropTarget(canvas: RuntimeCanvas): void {
-    const surface = canvas.wrapperEl;
-    if (!surface) return;
-    const dragover = (event: DragEvent) => {
-      if (canvas.readonly || !event.dataTransfer?.types.includes(COMPONENT_MIME)) return;
-      event.preventDefault();
-      event.dataTransfer.dropEffect = 'copy';
-      surface.classList.add('canvas-studio-component-drop-target');
-    };
-    const dragleave = (event: DragEvent) => {
-      const related = event.relatedTarget;
-      if (!(related instanceof Node) || !surface.contains(related)) surface.classList.remove('canvas-studio-component-drop-target');
-    };
-    const drop = (event: DragEvent) => {
-      surface.classList.remove('canvas-studio-component-drop-target');
-      if (canvas.readonly || !event.dataTransfer) return;
-      const componentId = event.dataTransfer.getData(COMPONENT_MIME);
-      if (!componentId) return;
-      event.preventDefault();
-      const component = this.availableComponents().find((candidate) => candidate.id === componentId);
-      if (!component) return;
-      this.insertComponentAt(component, this.componentDropPoint(canvas, event.clientX, event.clientY));
-    };
-    surface.addEventListener('dragover', dragover);
-    surface.addEventListener('dragleave', dragleave);
-    surface.addEventListener('drop', drop);
     this.componentDropCanvas = canvas;
-    this.componentDropHandlers = { dragover, dragleave, drop };
   }
 
   private unmountComponentDropTarget(): void {
     const surface = this.componentDropCanvas?.wrapperEl;
-    const handlers = this.componentDropHandlers;
-    if (surface && handlers) {
-      surface.removeEventListener('dragover', handlers.dragover);
-      surface.removeEventListener('dragleave', handlers.dragleave);
-      surface.removeEventListener('drop', handlers.drop);
-      surface.classList.remove('canvas-studio-component-drop-target');
-    }
+    surface?.classList.remove('canvas-studio-component-drop-target');
+    this.clearComponentDropPreview();
     this.componentDropCanvas = null;
-    this.componentDropHandlers = null;
+  }
+
+  private handleComponentDragOver(event: DragEvent): void {
+    const canvas = this.componentDropCanvas;
+    if (!canvas || canvas.readonly || !event.dataTransfer?.types.includes(COMPONENT_MIME)) return;
+    const componentId = event.dataTransfer.getData(COMPONENT_MIME);
+    const component = this.availableComponents().find((candidate) => candidate.id === componentId);
+    if (!component) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'copy';
+    canvas.wrapperEl?.classList.add('canvas-studio-component-drop-target');
+    this.showComponentDropPreview(component.name, event.clientX, event.clientY);
+  }
+
+  private handleComponentDrop(event: DragEvent): void {
+    const canvas = this.componentDropCanvas;
+    if (!canvas || canvas.readonly || !event.dataTransfer?.types.includes(COMPONENT_MIME)) return;
+    const componentId = event.dataTransfer.getData(COMPONENT_MIME);
+    const component = this.availableComponents().find((candidate) => candidate.id === componentId);
+    if (!component) return;
+    event.preventDefault();
+    this.clearComponentDropPreview();
+    this.insertComponentAt(component, this.componentDropPoint(canvas, event.clientX, event.clientY));
+  }
+
+  private showComponentDropPreview(name: string, clientX: number, clientY: number): void {
+    if (!this.componentDropPreview) {
+      this.componentDropPreview = document.body.createDiv({ cls: 'canvas-studio-component-drop-preview' });
+    }
+    this.componentDropPreview.setText(`放置：${name}`);
+    this.componentDropPreview.style.left = `${clientX + 14}px`;
+    this.componentDropPreview.style.top = `${clientY + 14}px`;
+  }
+
+  private clearComponentDropPreview(): void {
+    this.componentDropCanvas?.wrapperEl?.classList.remove('canvas-studio-component-drop-target');
+    this.componentDropPreview?.remove();
+    this.componentDropPreview = null;
   }
 
   private componentDropPoint(canvas: RuntimeCanvas, clientX: number, clientY: number): { x: number; y: number } {
@@ -1536,6 +1541,7 @@ class ComponentLibraryModal extends Modal {
         button.addEventListener('dragstart', (event) => {
           event.dataTransfer?.setData(COMPONENT_MIME, component.id);
           if (event.dataTransfer) event.dataTransfer.effectAllowed = 'copy';
+          this.close();
         });
         button.addEventListener('click', () => {
           this.insert(component);

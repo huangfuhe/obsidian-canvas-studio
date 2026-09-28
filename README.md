@@ -87,6 +87,9 @@ The 0.9.6 development build adds drag-and-drop insertion from the component
 library. The drop point follows the current Canvas viewport scale and creates
 the same native nodes as click insertion.
 
+The 0.9.7 patch keeps the drag interaction active through the component modal
+overlay and shows a pointer-following placement preview.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual
