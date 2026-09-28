@@ -25,6 +25,7 @@ import { alignCanvasEdges, mergeEdgeStyle, mergeNodeStyle, safeInsertionOrigin, 
 import { diagnoseCanvas, type CanvasHealthIssue } from './diagnostics';
 import { moveGroupChildren } from './group-follow';
 import { fitGroupsToChildren } from './group-layout';
+import { groupNodes, ungroupNodes } from './group-actions';
 import { computeMindMapLayout, moveNodesToLayout } from './layout';
 import { outlineToCanvas, parseMarkdownOutline } from './outline';
 import { findCanvasMatches, replaceAllMatches, replaceCurrentMatch, type CanvasSearchMatch } from './search';
@@ -918,7 +919,34 @@ export default class CanvasStudioPlugin extends Plugin {
     for (const [label, mode, icon] of actions) {
       menu.addItem((item) => item.setTitle(label).setIcon(icon).onClick(() => this.applyArrange(mode)));
     }
+    menu.addSeparator();
+    menu.addItem((item) => item.setTitle('组合选中节点').setIcon('group').onClick(() => this.groupSelection()));
+    menu.addItem((item) => item.setTitle('取消组合').setIcon('ungroup').onClick(() => this.ungroupSelection()));
     menu.showAtPosition(this.menuPosition(anchor));
+  }
+
+  private groupSelection(): void {
+    const canvas = this.currentCanvas();
+    if (!canvas || canvas.readonly) return;
+    const ids = new Set(this.selection(canvas).filter((node) => node.type !== 'group').map((node) => node.id));
+    if (ids.size < 2) {
+      new Notice('请选择至少两个节点后再组合。', 2500);
+      return;
+    }
+    replaceCanvasData(canvas, groupNodes(canvas.getData(), ids, { id: randomId('group'), label: '分组' }));
+    new Notice(`已将 ${ids.size} 个节点组合。`, 1800);
+  }
+
+  private ungroupSelection(): void {
+    const canvas = this.currentCanvas();
+    if (!canvas || canvas.readonly) return;
+    const ids = new Set(this.selection(canvas).filter((node) => node.type === 'group').map((node) => node.id));
+    if (ids.size === 0) {
+      new Notice('请选择至少一个分组后再取消组合。', 2500);
+      return;
+    }
+    replaceCanvasData(canvas, ungroupNodes(canvas.getData(), ids));
+    new Notice(`已取消 ${ids.size} 个分组。`, 1800);
   }
 
   private openEdgeMenu(anchor: HTMLElement): void {
