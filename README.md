@@ -67,8 +67,10 @@ matching the expected container behavior of a whiteboard editor.
 The 0.9.2 development build adds local saved components: select nodes, save a
 named component, and insert fresh copies from the `我的组件` library category.
 
-The 0.9.3 development build adds a native editable table component and a media
-insertion entry backed by Advanced Canvas file nodes.
+The 0.9.3 development build adds a native editable table component and a local
+Vault media library. Search and filter images, SVGs, PDFs, and common files,
+then insert the selected asset as a standard Canvas `file` node. Image assets
+show a thumbnail preview; no content sidecar file is created.
 
 ## Data policy
 

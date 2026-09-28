@@ -5,7 +5,8 @@
 ### Added
 
 - Native editable table component built from one group and text cell nodes.
-- Media/file toolbar entry backed by Advanced Canvas file-node creation.
+- Vault 媒体库：按文件名、路径和类型筛选图片、SVG、PDF 及常见文件。
+- 从媒体库插入标准 Canvas `file` 节点，并提供图片缩略图预览；不创建内容副文件。
 
 ## 0.9.2 - 2026-09-28
 

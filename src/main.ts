@@ -6,7 +6,8 @@ import {
   PluginSettingTab,
   Setting,
   setIcon,
-  setTooltip
+  setTooltip,
+  TFile
 } from 'obsidian';
 import {
   getCurrentCanvas,
@@ -33,6 +34,7 @@ import { FLOW_TEMPLATES, instantiateFlowTemplate } from './templates';
 import { applyCanvasTheme, CANVAS_THEMES } from './themes';
 import { COMPONENT_LIBRARY, componentsByCategory, type ComponentSpec } from './components';
 import { createSavedComponent, instantiateSavedComponent, type SavedCanvasComponent } from './saved-components';
+import { filterMediaItems, mediaItemsFromPaths, type MediaKind, type MediaItem } from './media';
 import type { CanvasDocument, CanvasNodeData, CanvasStyleAttributes, LayoutDirection } from './types';
 
 interface CanvasStudioSettings {
@@ -328,7 +330,7 @@ export default class CanvasStudioPlugin extends Plugin {
         case 'import': this.openOutlineImport(); break;
         case 'template': this.openTemplateMenu(button); break;
         case 'components': this.openComponentLibrary(); break;
-        case 'media': this.runAdvancedCommand('advanced-canvas:create-file-node'); break;
+        case 'media': this.openMediaLibrary(); break;
         case 'arrange': this.openArrangeMenu(button); break;
         case 'shape': this.openShapeMenu(button); break;
         case 'edge': this.openEdgeMenu(button); break;
@@ -351,7 +353,7 @@ export default class CanvasStudioPlugin extends Plugin {
     const readonly = Boolean(this.toolbarCanvas?.readonly);
     for (const button of this.toolbar.querySelectorAll('button')) {
       const action = button.dataset.canvasStudioAction;
-      const readonlySafe = new Set(['layout', 'import', 'template', 'components', 'media', 'theme', 'search', 'export', 'present', 'info', 'diagnostics']);
+      const readonlySafe = new Set(['layout', 'import', 'template', 'components', 'theme', 'search', 'export', 'present', 'info', 'diagnostics']);
       button.toggleAttribute('disabled', readonly && !readonlySafe.has(action ?? ''));
     }
     this.updateInspector();
@@ -711,6 +713,28 @@ export default class CanvasStudioPlugin extends Plugin {
       build: (origin: { x: number; y: number }, idFactory: (prefix: string) => string) => instantiateSavedComponent(component, origin, idFactory)
     }));
     new ComponentLibraryModal(this.app, (component) => this.insertComponent(component), [...COMPONENT_LIBRARY, ...saved], () => this.openSaveComponent()).open();
+  }
+
+  private openMediaLibrary(): void {
+    new MediaLibraryModal(this.app, (item) => this.insertMediaItem(item)).open();
+  }
+
+  private insertMediaItem(item: MediaItem): void {
+    const canvas = this.currentCanvas();
+    if (!canvas || canvas.readonly) return;
+    const data = canvas.getData();
+    const origin = safeInsertionOrigin(data, true);
+    const node = {
+      id: randomId('file'),
+      type: 'file' as const,
+      file: item.path,
+      x: origin.x,
+      y: origin.y,
+      width: item.kind === 'pdf' ? 440 : 360,
+      height: item.kind === 'image' || item.kind === 'vector' ? 260 : 180
+    };
+    replaceCanvasData(canvas, { ...data, nodes: [...data.nodes, node] });
+    new Notice(`已插入素材：${item.name}`, 1800);
   }
 
   private openSaveComponent(): void {
@@ -1344,6 +1368,114 @@ class ComponentLibraryModal extends Modal {
 
   override onClose(): void {
     this.contentEl.empty();
+  }
+}
+
+const MEDIA_KIND_LABELS: Record<MediaKind | 'all', string> = {
+  all: '全部类型',
+  image: '图片',
+  vector: 'SVG',
+  pdf: 'PDF',
+  file: '其他文件'
+};
+
+const MEDIA_KIND_ICONS: Record<MediaKind, string> = {
+  image: 'image',
+  vector: 'file-code-2',
+  pdf: 'file-text',
+  file: 'file'
+};
+
+class MediaLibraryModal extends Modal {
+  private readonly items: MediaItem[];
+  private queryInput!: HTMLInputElement;
+  private kindSelect!: HTMLSelectElement;
+  private summaryEl!: HTMLElement;
+  private listEl!: HTMLElement;
+
+  constructor(
+    app: CanvasStudioPlugin['app'],
+    private readonly insert: (item: MediaItem) => void
+  ) {
+    super(app);
+    this.items = mediaItemsFromPaths(this.app.vault.getFiles().map((file) => file.path));
+  }
+
+  override onOpen(): void {
+    this.titleEl.setText('Vault 媒体库');
+    this.modalEl.addClass('canvas-studio-media-modal');
+
+    const filters = this.contentEl.createDiv({ cls: 'canvas-studio-media-filters' });
+    this.queryInput = filters.createEl('input', {
+      type: 'search',
+      attr: { placeholder: '搜索文件名或路径', 'aria-label': '搜索文件名或路径' }
+    });
+    this.kindSelect = filters.createEl('select', { attr: { 'aria-label': '媒体类型' } });
+    for (const kind of ['all', 'image', 'vector', 'pdf', 'file'] as const) {
+      this.kindSelect.createEl('option', { value: kind, text: MEDIA_KIND_LABELS[kind] });
+    }
+
+    this.summaryEl = this.contentEl.createDiv({ cls: 'canvas-studio-media-summary' });
+    this.listEl = this.contentEl.createDiv({ cls: 'canvas-studio-media-list' });
+    this.queryInput.addEventListener('input', () => this.renderItems());
+    this.kindSelect.addEventListener('change', () => this.renderItems());
+    this.renderItems();
+    window.setTimeout(() => this.queryInput.focus(), 0);
+  }
+
+  override onClose(): void {
+    this.contentEl.empty();
+  }
+
+  private renderItems(): void {
+    const kind = this.kindSelect.value as MediaKind | 'all';
+    const items = filterMediaItems(this.items, this.queryInput.value, kind);
+    this.summaryEl.setText(`${items.length} 个文件可插入`);
+    this.listEl.empty();
+    if (items.length === 0) {
+      this.listEl.createDiv({ cls: 'canvas-studio-media-empty', text: '没有匹配的 Vault 文件。' });
+      return;
+    }
+    for (const item of items) this.renderItem(item);
+  }
+
+  private renderItem(item: MediaItem): void {
+    const button = this.listEl.createEl('button', {
+      cls: 'canvas-studio-media-item',
+      attr: { type: 'button', 'aria-label': `插入 ${item.name}` }
+    });
+    const preview = button.createDiv({ cls: 'canvas-studio-media-preview' });
+    this.renderPreview(preview, item);
+    const details = button.createDiv({ cls: 'canvas-studio-media-details' });
+    details.createDiv({ cls: 'canvas-studio-media-name', text: item.name });
+    details.createDiv({ cls: 'canvas-studio-media-path', text: item.path });
+    details.createDiv({ cls: 'canvas-studio-media-kind', text: MEDIA_KIND_LABELS[item.kind] });
+    setTooltip(button, `插入 ${item.path}`, { placement: 'top' });
+    button.addEventListener('click', () => {
+      this.insert(item);
+      this.close();
+    });
+  }
+
+  private renderPreview(container: HTMLElement, item: MediaItem): void {
+    const file = this.app.vault.getAbstractFileByPath(item.path);
+    if (item.kind === 'image' && file instanceof TFile) {
+      const image = container.createEl('img', {
+        attr: { src: this.app.vault.getResourcePath(file), alt: item.name, loading: 'lazy' }
+      });
+      image.addEventListener('error', () => {
+        image.remove();
+        this.renderFileIcon(container, item);
+      }, { once: true });
+      return;
+    }
+    this.renderFileIcon(container, item);
+  }
+
+  private renderFileIcon(container: HTMLElement, item: MediaItem): void {
+    const icon = container.createDiv({ cls: 'canvas-studio-media-icon' });
+    setIcon(icon, MEDIA_KIND_ICONS[item.kind]);
+    icon.setAttribute('aria-hidden', 'true');
   }
 }
 

@@ -329,6 +329,115 @@
   margin-bottom: 10px;
 }
 
+.canvas-studio-media-modal {
+  width: min(760px, calc(100vw - 32px));
+}
+
+.canvas-studio-media-filters {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 150px;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.canvas-studio-media-filters input,
+.canvas-studio-media-filters select {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.canvas-studio-media-summary {
+  margin-bottom: 8px;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.canvas-studio-media-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  max-height: min(460px, 55vh);
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.canvas-studio-media-item {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 10px;
+  min-height: 72px;
+  padding: 8px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  background: var(--background-secondary);
+  color: var(--text-normal);
+  text-align: left;
+}
+
+.canvas-studio-media-item:hover,
+.canvas-studio-media-item:focus-visible {
+  border-color: var(--interactive-accent);
+  background: var(--background-modifier-hover);
+}
+
+.canvas-studio-media-preview {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  overflow: hidden;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  background: var(--background-primary);
+}
+
+.canvas-studio-media-preview img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.canvas-studio-media-icon {
+  display: grid;
+  place-items: center;
+  color: var(--text-muted);
+}
+
+.canvas-studio-media-icon .svg-icon {
+  width: 26px;
+  height: 26px;
+}
+
+.canvas-studio-media-details {
+  min-width: 0;
+  align-self: center;
+}
+
+.canvas-studio-media-name,
+.canvas-studio-media-path {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.canvas-studio-media-name {
+  font-weight: 600;
+}
+
+.canvas-studio-media-path,
+.canvas-studio-media-kind {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.canvas-studio-media-empty {
+  grid-column: 1 / -1;
+  padding: 32px 12px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
 .canvas-studio-component-card .svg-icon {
   grid-row: span 2;
   align-self: center;
@@ -347,8 +456,21 @@ body.is-mobile .canvas-studio-component-modal {
   width: calc(100vw - 24px);
 }
 
+body.is-mobile .canvas-studio-media-modal {
+  width: calc(100vw - 24px);
+}
+
+body.is-mobile .canvas-studio-media-filters {
+  grid-template-columns: 1fr;
+}
+
 body.is-mobile .canvas-studio-component-grid {
   grid-template-columns: 1fr;
+}
+
+body.is-mobile .canvas-studio-media-list {
+  grid-template-columns: 1fr;
+  max-height: 55vh;
 }
 
 .canvas-studio-diagnostics-clean {
