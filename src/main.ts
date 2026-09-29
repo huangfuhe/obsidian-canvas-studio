@@ -90,6 +90,9 @@ const TOOLBAR_ACTIONS = [
   { id: 'search', icon: 'search', label: '搜索与替换文本', shortLabel: '搜索' },
   { id: 'export', icon: 'download', label: '导出 PNG/SVG 图片', shortLabel: '导出' },
   { id: 'present', icon: 'presentation', label: '开始演示模式', shortLabel: '演示' },
+  { id: 'previous-node', icon: 'arrow-left', label: '演示上一个节点', shortLabel: '上一个' },
+  { id: 'next-node', icon: 'arrow-right', label: '演示下一个节点', shortLabel: '下一个' },
+  { id: 'end-presentation', icon: 'x', label: '结束演示模式', shortLabel: '结束' },
   { id: 'info', icon: 'info', label: '查看画布信息', shortLabel: '信息' },
   { id: 'diagnostics', icon: 'shield-check', label: '检查白板完整性', shortLabel: '检查' },
   { id: 'zoom-selection', icon: 'scan-search', label: '缩放到选中内容', shortLabel: '选区' },
@@ -100,10 +103,10 @@ const TOOLBAR_ACTIONS = [
 
 type ToolbarActionId = typeof TOOLBAR_ACTIONS[number]['id'];
 const SECONDARY_TOOLBAR_ACTIONS = new Set<ToolbarActionId>([
-  'theme', 'search', 'export', 'present', 'info', 'diagnostics', 'zoom-selection', 'zoom-fit', 'copy-style', 'paste-style'
+  'theme', 'search', 'export', 'present', 'previous-node', 'next-node', 'end-presentation', 'info', 'diagnostics', 'zoom-selection', 'zoom-fit', 'copy-style', 'paste-style'
 ]);
 const READONLY_TOOLBAR_ACTIONS = new Set<ToolbarActionId | 'more'>([
-  'search', 'export', 'present', 'info', 'diagnostics', 'zoom-selection', 'zoom-fit', 'more'
+  'search', 'export', 'present', 'previous-node', 'next-node', 'end-presentation', 'info', 'diagnostics', 'zoom-selection', 'zoom-fit', 'more'
 ]);
 const COMPONENT_MIME = 'application/x-canvas-studio-component';
 
@@ -210,6 +213,22 @@ export default class CanvasStudioPlugin extends Plugin {
       name: 'Canvas Studio: 开始演示',
       checkCallback: (checking) => this.commandAvailability(checking, () => this.runAdvancedCommand('advanced-canvas:start-presentation'))
     });
+    for (const [id, name, commandId] of [
+      ['previous-presentation-node', 'Canvas Studio: 演示上一个节点', 'advanced-canvas:previous-node'],
+      ['next-presentation-node', 'Canvas Studio: 演示下一个节点', 'advanced-canvas:next-node'],
+      ['end-presentation', 'Canvas Studio: 结束演示', 'advanced-canvas:end-presentation']
+    ] as const) {
+      this.addCommand({
+        id,
+        name,
+        checkCallback: (checking) => {
+          const canvas = getCurrentCanvas(this.app);
+          if (!canvas) return false;
+          if (!checking) this.runAdvancedCommand(commandId);
+          return true;
+        }
+      });
+    }
     this.addCommand({
       id: 'toggle-readonly',
       name: 'Canvas Studio: 切换只读模式',
@@ -470,6 +489,9 @@ export default class CanvasStudioPlugin extends Plugin {
       case 'search': this.openSearch(); break;
       case 'export': this.openExportMenu(anchor); break;
       case 'present': this.runAdvancedCommand('advanced-canvas:start-presentation'); break;
+      case 'previous-node': this.runAdvancedCommand('advanced-canvas:previous-node'); break;
+      case 'next-node': this.runAdvancedCommand('advanced-canvas:next-node'); break;
+      case 'end-presentation': this.runAdvancedCommand('advanced-canvas:end-presentation'); break;
       case 'info': this.openCanvasInfo(); break;
       case 'diagnostics': this.openDiagnostics(); break;
       case 'zoom-selection': this.runAdvancedCommand('advanced-canvas:zoom-to-selection'); break;
