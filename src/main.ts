@@ -929,11 +929,20 @@ export default class CanvasStudioPlugin extends Plugin {
     opacity.addEventListener('change', () => this.applyStyle({ opacity: Number(opacity.value) }));
 
     const transformField = field('变换');
-    const rotation = transformField.createEl('select', { attr: { 'aria-label': '旋转角度' } });
-    for (const value of [0, 90, 180, 270]) rotation.createEl('option', { value: String(value), text: `旋转 ${value}°` });
+    const rotation = transformField.createEl('input', { type: 'number', attr: { 'aria-label': '旋转角度', min: '-360', max: '360', step: '1' } });
     const currentRotation = nodes[0]?.styleAttributes?.rotation;
     rotation.value = typeof currentRotation === 'number' ? String(((currentRotation % 360) + 360) % 360) : '0';
     rotation.addEventListener('change', () => this.applyStyle({ rotation: Number(rotation.value) }));
+    const rotateBy = (delta: number) => {
+      const next = ((Number(rotation.value) + delta) % 360 + 360) % 360;
+      rotation.value = String(next);
+      this.applyStyle({ rotation: next });
+    };
+    const rotateActions = transformField.createDiv({ cls: 'canvas-studio-inspector-segmented' });
+    const rotateLeft = rotateActions.createEl('button', { text: '左转 15°' });
+    rotateLeft.addEventListener('click', () => rotateBy(-15));
+    const rotateRight = rotateActions.createEl('button', { text: '右转 15°' });
+    rotateRight.addEventListener('click', () => rotateBy(15));
     const flipActions = transformField.createDiv({ cls: 'canvas-studio-inspector-segmented' });
     const flipX = flipActions.createEl('button', { text: '水平翻转' });
     flipX.addEventListener('click', () => this.applyStyle({ flipX: nodes.every((node) => node.styleAttributes?.flipX === true) ? false : true }));

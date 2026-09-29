@@ -323,6 +323,9 @@ The 0.9.80 patch fixes inspector readback for native and custom edge endpoints.
 The 0.9.81 patch extends diagnostics to stale mind-map, swimlane, and table
 semantic references.
 
+The 0.9.82 patch expands node rotation from fixed quarters to arbitrary angles
+with 15-degree step controls.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual
