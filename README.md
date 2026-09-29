@@ -166,6 +166,9 @@ preserving their display titles.
 The 0.9.31 development build adds selection zoom and fit-to-view navigation
 through Advanced Canvas.
 
+The 0.9.32 development build adds previous/next presentation navigation and an
+explicit end-presentation command.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual
