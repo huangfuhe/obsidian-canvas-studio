@@ -42,7 +42,7 @@ import { snapNodePosition } from './snap';
 import { instantiateSwimlane, SWIMLANE_TEMPLATES } from './swimlane';
 import { FLOW_TEMPLATES, instantiateFlowTemplate } from './templates';
 import { applyCanvasTheme, CANVAS_THEMES } from './themes';
-import { addTableColumn, addTableRow } from './table-actions';
+import { addTableColumn, addTableRow, removeLastTableColumn, removeLastTableRow } from './table-actions';
 import { canvasBackground, canvasGridEnabled, canvasMode, setCanvasBackground, setCanvasGrid, setCanvasMode, type CanvasBackground, type CanvasMode } from './canvas-view';
 import { COMPONENT_LIBRARY, componentsByCategory, filterComponents, type ComponentSpec } from './components';
 import { createSavedComponent, instantiateSavedComponent, type SavedCanvasComponent } from './saved-components';
@@ -895,6 +895,11 @@ export default class CanvasStudioPlugin extends Plugin {
         addRow.addEventListener('click', () => this.addSelectedTableDimension('row'));
         const addColumn = tableActions.createEl('button', { text: '新增列' });
         addColumn.addEventListener('click', () => this.addSelectedTableDimension('column'));
+        const removeActions = tableField.createDiv({ cls: 'canvas-studio-inspector-segmented' });
+        const removeRow = removeActions.createEl('button', { text: '删除末行' });
+        removeRow.addEventListener('click', () => this.removeSelectedTableDimension('row'));
+        const removeColumn = removeActions.createEl('button', { text: '删除末列' });
+        removeColumn.addEventListener('click', () => this.removeSelectedTableDimension('column'));
       }
     }
 
@@ -2544,6 +2549,21 @@ export default class CanvasStudioPlugin extends Plugin {
       : addTableColumn(canvas.getData(), group.id, randomId);
     replaceCanvasData(canvas, nextData);
     new Notice(axis === 'row' ? '已新增表格行。' : '已新增表格列。', 1600);
+  }
+
+  private removeSelectedTableDimension(axis: 'row' | 'column'): void {
+    const canvas = this.currentCanvas();
+    if (!canvas || canvas.readonly) return;
+    const [group] = this.selection(canvas).filter((node) => node.type === 'group' && node.styleAttributes?.canvasStudioTable === true);
+    if (!group || !window.confirm(axis === 'row' ? '删除表格最后一行？此操作可撤销。' : '删除表格最后一列？此操作可撤销。')) return;
+    const data = canvas.getData();
+    const nextData = axis === 'row' ? removeLastTableRow(data, group.id) : removeLastTableColumn(data, group.id);
+    if (nextData === data) {
+      new Notice('表格至少保留一行和一列。', 2000);
+      return;
+    }
+    replaceCanvasData(canvas, nextData);
+    new Notice(axis === 'row' ? '已删除表格末行。' : '已删除表格末列。', 1600);
   }
 
   private fitSelectedGroups(): void {

@@ -84,3 +84,35 @@ export function addTableColumn(data: CanvasDocument, groupId: string, idFactory:
     } : node).concat(cells)
   };
 }
+
+function removeTableCells(data: CanvasDocument, group: CanvasNodeData, axis: 'row' | 'column'): CanvasDocument {
+  const metrics = tableMetrics(group);
+  if (!metrics) return data;
+  if (axis === 'row' && metrics.rows <= 1 || axis === 'column' && metrics.columns <= 1) return data;
+  const target = axis === 'row' ? metrics.rows - 1 : metrics.columns - 1;
+  const removedIds = new Set(data.nodes.filter((node) => {
+    if (node.styleAttributes?.canvasStudioTableId !== group.id) return false;
+    const index = Number(axis === 'row' ? node.styleAttributes.canvasStudioTableRow : node.styleAttributes.canvasStudioTableColumn);
+    return index === target;
+  }).map((node) => node.id));
+  return {
+    ...data,
+    nodes: data.nodes.filter((node) => !removedIds.has(node.id)).map((node) => node.id === group.id ? {
+      ...node,
+      ...(axis === 'row'
+        ? { height: (metrics.rows - 1) * metrics.cellHeight, styleAttributes: { ...(node.styleAttributes ?? {}), canvasStudioTableRows: metrics.rows - 1 } }
+        : { width: (metrics.columns - 1) * metrics.cellWidth, styleAttributes: { ...(node.styleAttributes ?? {}), canvasStudioTableColumns: metrics.columns - 1 } })
+    } : node),
+    edges: data.edges.filter((edge) => !removedIds.has(edge.fromNode) && !removedIds.has(edge.toNode))
+  };
+}
+
+export function removeLastTableRow(data: CanvasDocument, groupId: string): CanvasDocument {
+  const group = data.nodes.find((node) => node.id === groupId && node.type === 'group');
+  return group ? removeTableCells(data, group, 'row') : data;
+}
+
+export function removeLastTableColumn(data: CanvasDocument, groupId: string): CanvasDocument {
+  const group = data.nodes.find((node) => node.id === groupId && node.type === 'group');
+  return group ? removeTableCells(data, group, 'column') : data;
+}

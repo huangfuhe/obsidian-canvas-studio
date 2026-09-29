@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { COMPONENT_LIBRARY } from '../src/components';
-import { addTableColumn, addTableRow } from '../src/table-actions';
+import { addTableColumn, addTableRow, removeLastTableColumn, removeLastTableRow } from '../src/table-actions';
 
 test('adds rows and columns to a semantic native Canvas table', () => {
   let index = 0;
@@ -21,4 +21,11 @@ test('adds rows and columns to a semantic native Canvas table', () => {
   assert.equal(withColumn.nodes[0]?.width, 600);
   assert.equal(withColumn.nodes[0]?.styleAttributes?.canvasStudioTableColumns, 4);
   assert.equal(withColumn.nodes.at(-1)?.styleAttributes?.canvasStudioTableColumn, 3);
+
+  const withoutRow = removeLastTableRow(withColumn, group.id);
+  assert.equal(withoutRow.nodes[0]?.styleAttributes?.canvasStudioTableRows, 4);
+  assert.equal(withoutRow.nodes.filter((node) => node.styleAttributes?.canvasStudioTableRow === 4).length, 0);
+  const withoutColumn = removeLastTableColumn(withoutRow, group.id);
+  assert.equal(withoutColumn.nodes[0]?.styleAttributes?.canvasStudioTableColumns, 3);
+  assert.equal(withoutColumn.nodes.filter((node) => node.styleAttributes?.canvasStudioTableColumn === 3).length, 0);
 });

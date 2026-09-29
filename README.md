@@ -315,6 +315,9 @@ nodes, preserving their width and position.
 The 0.9.78 patch adds semantic table row/column metadata and inspector actions
 for appending rows and columns to native group/text tables.
 
+The 0.9.79 patch adds confirmed removal of the last table row or column and
+cleans connected edges for removed cells.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual
