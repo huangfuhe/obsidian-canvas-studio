@@ -337,6 +337,9 @@ semantic cells and resize the table group together.
 The 0.9.86 patch adds media/file type readback and a default-size reset action
 for selected native file nodes.
 
+The 0.9.87 patch adds cover/ratio/repeat background-style controls for image and
+SVG file nodes using native Canvas fields.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual

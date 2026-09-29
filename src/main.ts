@@ -826,6 +826,15 @@ export default class CanvasStudioPlugin extends Plugin {
       const mediaActions = mediaSummary.createDiv({ cls: 'canvas-studio-inspector-segmented' });
       const fitMedia = mediaActions.createEl('button', { text: '恢复默认尺寸' });
       fitMedia.addEventListener('click', () => this.resetSelectedFileSize(kind));
+      if (kind === 'image' || kind === 'vector') {
+        const fill = field('图片填充方式');
+        const fillSelect = fill.createEl('select', { attr: { 'aria-label': '图片填充方式' } });
+        for (const [value, label] of [['cover', '裁剪填充'], ['ratio', '保持比例'], ['repeat', '平铺']] as const) {
+          fillSelect.createEl('option', { value, text: label });
+        }
+        fillSelect.value = file?.backgroundStyle ?? 'cover';
+        fillSelect.addEventListener('change', () => this.applyFileBackgroundStyle(fillSelect.value as CanvasNodeData['backgroundStyle']));
+      }
     }
 
     const groups = nodes.filter((node) => node.type === 'group');
@@ -2065,6 +2074,14 @@ export default class CanvasStudioPlugin extends Plugin {
     const size = kind === 'pdf' ? { width: 440, height: 180 } : kind === 'image' || kind === 'vector' ? { width: 360, height: 260 } : { width: 360, height: 180 };
     replaceCanvasData(canvas, updateNodes(canvas.getData(), new Set([fileNode.id]), (node) => ({ ...node, ...size })));
     new Notice('已恢复素材默认尺寸。', 1600);
+  }
+
+  private applyFileBackgroundStyle(backgroundStyle: CanvasNodeData['backgroundStyle']): void {
+    const canvas = this.currentCanvas();
+    if (!canvas || canvas.readonly || !backgroundStyle) return;
+    const [fileNode] = this.selection(canvas).filter((node) => node.type === 'file');
+    if (!fileNode) return;
+    replaceCanvasData(canvas, updateNodes(canvas.getData(), new Set([fileNode.id]), (node) => ({ ...node, backgroundStyle })));
   }
 
   private resizeSelectedGroups(width: number, height: number): void {
