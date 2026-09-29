@@ -6,7 +6,8 @@ export type CanvasHealthKind =
   | 'orphan-edge'
   | 'cycle'
   | 'overlap'
-  | 'outside-group';
+  | 'outside-group'
+  | 'invalid-semantic-reference';
 
 export interface CanvasHealthIssue {
   kind: CanvasHealthKind;
@@ -40,6 +41,32 @@ export function diagnoseCanvas(data: CanvasDocument): CanvasHealthIssue[] {
   }
 
   const nodeIds = new Set(data.nodes.map((node) => node.id));
+  const groupsById = new Map(data.nodes.filter((node) => node.type === 'group').map((node) => [node.id, node]));
+  const metadata = data.metadata as Record<string, unknown> | undefined;
+  const studio = metadata?.canvasStudio as Record<string, unknown> | undefined;
+  const mindMapRootId = studio?.mindMapRootId;
+  if (typeof mindMapRootId === 'string' && !nodeIds.has(mindMapRootId)) {
+    issues.push({ kind: 'invalid-semantic-reference', ids: [mindMapRootId], message: `思维导图根节点不存在：${mindMapRootId}` });
+  }
+  const collapsed = studio?.collapsedMindMapNodeIds;
+  if (Array.isArray(collapsed)) {
+    for (const nodeId of collapsed) {
+      if (typeof nodeId === 'string' && !nodeIds.has(nodeId)) {
+        issues.push({ kind: 'invalid-semantic-reference', ids: [nodeId], message: `折叠分支节点不存在：${nodeId}` });
+      }
+    }
+  }
+  for (const node of data.nodes) {
+    const laneId = node.styleAttributes?.canvasStudioLaneId;
+    if (typeof laneId === 'string' && !groupsById.has(laneId)) {
+      issues.push({ kind: 'invalid-semantic-reference', ids: [node.id, laneId], message: `节点 ${node.id} 引用了不存在的泳道 ${laneId}` });
+    }
+    const tableId = node.styleAttributes?.canvasStudioTableId;
+    const table = typeof tableId === 'string' ? groupsById.get(tableId) : undefined;
+    if (typeof tableId === 'string' && table?.styleAttributes?.canvasStudioTable !== true) {
+      issues.push({ kind: 'invalid-semantic-reference', ids: [node.id, tableId], message: `单元格 ${node.id} 引用了不存在的表格 ${tableId}` });
+    }
+  }
   for (const edge of data.edges) {
     if (!edge.fromNode || !edge.toNode) {
       issues.push({ kind: 'invalid-edge', ids: [edge.id], message: `连线 ${edge.id} 缺少端点` });

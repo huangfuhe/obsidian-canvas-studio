@@ -320,6 +320,9 @@ cleans connected edges for removed cells.
 
 The 0.9.80 patch fixes inspector readback for native and custom edge endpoints.
 
+The 0.9.81 patch extends diagnostics to stale mind-map, swimlane, and table
+semantic references.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual
