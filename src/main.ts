@@ -37,7 +37,7 @@ import { computeMindMapLayout, moveNodesToLayout } from './layout';
 import { outlineToCanvas, parseMarkdownOutline } from './outline';
 import { findCanvasMatches, replaceAllMatches, replaceCurrentMatch, type CanvasSearchMatch } from './search';
 import { markdownTextSelection, styleTextSelection, type TextSelectionSnapshot } from './rich-text';
-import { mindMapRootId, setMindMapRoot as setCanvasMindMapRoot } from './mindmap';
+import { applyMindMapTheme, mindMapRootId, MIND_MAP_THEMES, setMindMapRoot as setCanvasMindMapRoot } from './mindmap';
 import { snapNodePosition } from './snap';
 import { instantiateSwimlane, SWIMLANE_TEMPLATES } from './swimlane';
 import { FLOW_TEMPLATES, instantiateFlowTemplate } from './templates';
@@ -714,6 +714,11 @@ export default class CanvasStudioPlugin extends Plugin {
         cls: 'canvas-studio-inspector-action'
       });
       rootAction.addEventListener('click', () => this.setMindMapRoot());
+    }
+    if (activeCanvas && (mindMapRootId(activeCanvas.getData()) || nodes.length === 1)) {
+      const mindMapField = field('思维导图主题');
+      const themeButton = mindMapField.createEl('button', { text: '应用层级主题', cls: 'canvas-studio-inspector-action' });
+      themeButton.addEventListener('click', () => this.openMindMapThemeMenu(themeButton));
     }
 
     const links = nodes.filter((node) => node.type === 'link');
@@ -1436,6 +1441,25 @@ export default class CanvasStudioPlugin extends Plugin {
     const nextRoot = currentRoot === node.id ? null : node.id;
     replaceCanvasData(canvas, setCanvasMindMapRoot(canvas.getData(), nextRoot));
     new Notice(nextRoot ? '已设为思维导图根节点。' : '已取消思维导图根节点。', 1800);
+  }
+
+  private openMindMapThemeMenu(anchor: HTMLElement): void {
+    const canvas = this.currentCanvas();
+    if (!canvas || canvas.readonly) return;
+    const data = canvas.getData();
+    const rootId = mindMapRootId(data) ?? this.selection(canvas)[0]?.id;
+    if (!rootId) return;
+    const menu = new Menu();
+    for (const theme of MIND_MAP_THEMES) {
+      menu.addItem((item) => item
+        .setTitle(theme.name)
+        .setIcon('palette')
+        .onClick(() => {
+          replaceCanvasData(canvas, applyMindMapTheme(data, rootId, theme));
+          new Notice(`已应用${theme.name}主题。`, 1800);
+        }));
+    }
+    menu.showAtPosition(this.menuPosition(anchor));
   }
 
   private nextChildCrossPosition(canvas: RuntimeCanvas, parent: CanvasNodeData): number {

@@ -243,6 +243,9 @@ the persisted lane membership in sync when a node enters or leaves a lane.
 The 0.9.55 patch adds a Chinese target-lane notice and a subtle pulse animation
 to make the drop destination easier to scan.
 
+The 0.9.56 patch adds depth-aware mind-map themes for root and branch levels,
+using only native node styles and optional Canvas Studio metadata.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual
