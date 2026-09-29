@@ -175,6 +175,9 @@ edge remapping and a `Ctrl/Cmd+D` shortcut.
 The 0.9.34 development build adds validated Vault-path editing for selected
 file nodes.
 
+The 0.9.35 development build adds a live selection-context label to the toolbar
+for canvas, node, edge, and mixed selections.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual

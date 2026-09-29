@@ -25,6 +25,7 @@ import { arrangeNodes, type ArrangeMode } from './arrange';
 import { alignCanvasEdges, mergeEdgeStyle, mergeNodeStyle, safeInsertionOrigin, updateNodes } from './canvas-data';
 import { connectNodes } from './edge-actions';
 import { duplicateSelection } from './selection-actions';
+import { describeSelectionContext } from './selection-context';
 import { diagnoseCanvas, type CanvasHealthIssue } from './diagnostics';
 import { moveGroupChildren } from './group-follow';
 import { fitGroupsToChildren } from './group-layout';
@@ -116,6 +117,7 @@ export default class CanvasStudioPlugin extends Plugin {
   private toolbar: HTMLElement | null = null;
   private inspector: HTMLElement | null = null;
   private toolbarCanvas: RuntimeCanvas | null = null;
+  private toolbarContext: HTMLElement | null = null;
   private copiedStyle: CanvasStyleAttributes | null = null;
   private pendingTextSelection: TextSelectionSnapshot | null = null;
   private snappingNodeIds = new Set<string>();
@@ -433,6 +435,9 @@ export default class CanvasStudioPlugin extends Plugin {
       this.toolbar = document.createElement('div');
       this.toolbar.className = 'canvas-studio-toolbar';
       this.toolbar.setAttribute('aria-label', 'Canvas Studio 工具栏');
+      this.toolbarContext = document.createElement('span');
+      this.toolbarContext.className = 'canvas-studio-toolbar-context';
+      this.toolbar.appendChild(this.toolbarContext);
       for (const action of TOOLBAR_ACTIONS) {
         if (!SECONDARY_TOOLBAR_ACTIONS.has(action.id)) this.addToolbarButton(action);
       }
@@ -513,8 +518,14 @@ export default class CanvasStudioPlugin extends Plugin {
   }
 
   private updateToolbarState(): void {
-    if (!this.toolbar) return;
-    const readonly = Boolean(this.toolbarCanvas?.readonly);
+    const canvas = this.toolbarCanvas;
+    if (!this.toolbar || !canvas) return;
+    const readonly = Boolean(canvas.readonly);
+    const context = describeSelectionContext(selectedNodeData(canvas), selectedEdgeData(canvas));
+    if (this.toolbarContext) {
+      this.toolbarContext.setText(context.count > 0 ? `${context.label} · ${context.count}` : context.label);
+      this.toolbarContext.dataset.context = context.kind;
+    }
     for (const button of this.toolbar.querySelectorAll('button')) {
       const action = button.dataset.canvasStudioAction;
       button.toggleAttribute('disabled', readonly && !READONLY_TOOLBAR_ACTIONS.has((action ?? '') as ToolbarActionId | 'more'));
@@ -778,6 +789,7 @@ export default class CanvasStudioPlugin extends Plugin {
     this.toolbar = null;
     this.toolbarCanvas = null;
     this.inspector = null;
+    this.toolbarContext = null;
   }
 
   private refreshEdgeWaypointOverlay(canvas?: RuntimeCanvas): void {
