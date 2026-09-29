@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.9 - 2026-09-29
+
+### Added
+
+- 单条连线支持添加、拖动、双击删除和清除手动折点。
+- 折点保存到 edge 的可选 `styleAttributes` 字段，并由 Canvas Studio SVG 层渲染。
+
 ## 0.9.8 - 2026-09-29
 
 ### Added

@@ -93,6 +93,11 @@ overlay and shows a pointer-following placement preview.
 The 0.9.8 development build adds container snapping for moved nodes and
 component drops, keeping resulting native nodes inside a group or lane.
 
+The 0.9.9 development build adds basic manual edge waypoints. Select one edge,
+add a waypoint from the inspector, then drag a handle to reshape the local
+route; double-click a handle to remove it. Waypoints remain optional Canvas
+extension data and clearing them restores the Advanced Canvas route.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual

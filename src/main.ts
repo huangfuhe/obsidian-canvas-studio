@@ -15,6 +15,7 @@ import {
   randomId,
   replaceCanvasData,
   selectedEdgeData,
+  selectedRuntimeEdges,
   selectedNodeData,
   selectedRuntimeNodes,
   type RuntimeCanvas,
@@ -39,7 +40,8 @@ import { COMPONENT_LIBRARY, componentsByCategory, type ComponentSpec } from './c
 import { createSavedComponent, instantiateSavedComponent, type SavedCanvasComponent } from './saved-components';
 import { filterMediaItems, mediaItemsFromPaths, type MediaKind, type MediaItem } from './media';
 import { clientPointToCanvas, parseCssTransform } from './canvas-position';
-import type { CanvasDocument, CanvasNodeData, CanvasStyleAttributes, LayoutDirection } from './types';
+import { addWaypointAtLongestSegment, edgeRoutePoints, EDGE_WAYPOINTS_KEY, parseEdgeWaypoints, polylinePath, serializeEdgeWaypoints, type EdgeWaypoint } from './edge-waypoints';
+import type { CanvasDocument, CanvasEdgeData, CanvasNodeData, CanvasStyleAttributes, LayoutDirection } from './types';
 
 interface CanvasStudioSettings {
   defaultFontFamily: string;
@@ -107,6 +109,11 @@ export default class CanvasStudioPlugin extends Plugin {
   private componentDropCanvas: RuntimeCanvas | null = null;
   private componentDropPreview: HTMLElement | null = null;
   private activeComponentDragId: string | null = null;
+  private edgeWaypointOverlay: SVGGElement | null = null;
+  private edgeWaypointCanvas: RuntimeCanvas | null = null;
+  private edgeWaypointDisplay: SVGPathElement | null = null;
+  private edgeWaypointTransient = new Map<string, EdgeWaypoint[]>();
+  private edgeWaypointDrag: { canvas: RuntimeCanvas; edgeId: string; index: number } | null = null;
 
   override async onload(): Promise<void> {
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
@@ -211,10 +218,15 @@ export default class CanvasStudioPlugin extends Plugin {
       this.activeComponentDragId = null;
       this.clearComponentDropPreview();
     });
+    this.registerDomEvent(document, 'pointermove', (event) => this.handleEdgeWaypointPointerMove(event));
+    this.registerDomEvent(document, 'pointerup', () => this.handleEdgeWaypointPointerUp());
     this.registerEvent(this.app.workspace.on('layout-change', () => this.refreshToolbar()));
     this.registerEvent(this.app.workspace.on('active-leaf-change', () => this.refreshToolbar()));
     this.registerEvent(this.app.workspace.on('advanced-canvas:canvas-changed' as never, () => this.refreshToolbar()));
     this.registerEvent(this.app.workspace.on('advanced-canvas:selection-changed' as never, () => this.updateToolbarState()));
+    this.registerEvent(this.app.workspace.on('advanced-canvas:selection-changed' as never, (...args: unknown[]) => {
+      this.refreshEdgeWaypointOverlay(args[0] as RuntimeCanvas | undefined);
+    }));
     this.registerEvent(this.app.workspace.on('advanced-canvas:node-rendered' as never, (...args: unknown[]) => {
       const node = args[1] as RuntimeCanvasNode | undefined;
       if (node) this.applyTypography(node);
@@ -222,7 +234,13 @@ export default class CanvasStudioPlugin extends Plugin {
     this.registerEvent(this.app.workspace.on('advanced-canvas:node-moved' as never, (...args: unknown[]) => {
       const canvas = args[0] as RuntimeCanvas | undefined;
       const node = args[1] as RuntimeCanvasNode | undefined;
-      if (canvas && node) this.handleNodeMoved(canvas, node);
+      if (canvas && node) {
+        this.handleNodeMoved(canvas, node);
+        this.refreshEdgeWaypointOverlay(canvas);
+      }
+    }));
+    this.registerEvent(this.app.workspace.on('advanced-canvas:edge-changed' as never, (...args: unknown[]) => {
+      this.refreshEdgeWaypointOverlay(args[0] as RuntimeCanvas | undefined);
     }));
     this.registerEvent(this.app.workspace.on('advanced-canvas:canvas-view-unloaded:before' as never, () => this.unmountToolbar()));
 
@@ -232,6 +250,7 @@ export default class CanvasStudioPlugin extends Plugin {
   override onunload(): void {
     for (const node of this.toolbarCanvas?.nodes.values() ?? []) this.clearTypography(node);
     this.unmountToolbar();
+    this.clearEdgeWaypointOverlay();
   }
 
   async saveSettings(): Promise<void> {
@@ -402,6 +421,7 @@ export default class CanvasStudioPlugin extends Plugin {
       button.toggleAttribute('disabled', readonly && !READONLY_TOOLBAR_ACTIONS.has((action ?? '') as ToolbarActionId | 'more'));
     }
     this.updateInspector();
+    this.refreshEdgeWaypointOverlay(this.toolbarCanvas ?? undefined);
   }
 
   private updateInspector(): void {
@@ -518,6 +538,16 @@ export default class CanvasStudioPlugin extends Plugin {
     route.value = typeof currentRoute === 'string' ? currentRoute : 'square';
     route.addEventListener('change', () => this.applyEdgeStyle({ pathfindingMethod: route.value }));
 
+    const waypointField = container.createDiv({ cls: 'canvas-studio-inspector-field' });
+    waypointField.createEl('label', { text: '手动折点' });
+    const waypointActions = waypointField.createDiv({ cls: 'canvas-studio-inspector-segmented' });
+    const addWaypoint = waypointActions.createEl('button', { text: '添加折点' });
+    addWaypoint.addEventListener('click', () => this.addEdgeWaypoint());
+    const clearWaypoints = waypointActions.createEl('button', { text: '清除折点' });
+    clearWaypoints.addEventListener('click', () => this.clearEdgeWaypoints());
+    const waypointCount = parseEdgeWaypoints(edges[0] ?? { styleAttributes: {} } as CanvasEdgeData).length;
+    waypointField.createDiv({ cls: 'canvas-studio-inspector-detail', text: `当前 ${waypointCount} 个；拖动圆点调整，双击圆点删除` });
+
     const colorField = container.createDiv({ cls: 'canvas-studio-inspector-field' });
     colorField.createEl('label', { text: '连线颜色' });
     const color = colorField.createEl('select');
@@ -553,6 +583,7 @@ export default class CanvasStudioPlugin extends Plugin {
 
   private unmountToolbar(): void {
     this.unmountComponentDropTarget();
+    this.clearEdgeWaypointOverlay();
     if (this.toolbarCanvas?.wrapperEl) {
       this.toolbarCanvas.wrapperEl.classList.remove(...CANVAS_THEMES.map((theme) => theme.canvasClass));
     }
@@ -561,6 +592,132 @@ export default class CanvasStudioPlugin extends Plugin {
     this.toolbar = null;
     this.toolbarCanvas = null;
     this.inspector = null;
+  }
+
+  private refreshEdgeWaypointOverlay(canvas?: RuntimeCanvas): void {
+    const target = canvas ?? this.toolbarCanvas;
+    if (!target) {
+      this.clearEdgeWaypointOverlay();
+      return;
+    }
+    const [runtimeEdge] = selectedRuntimeEdges(target);
+    const selectedEdges = selectedRuntimeEdges(target);
+    const edgeData = runtimeEdge?.getData() as CanvasEdgeData | undefined;
+    const waypoints = edgeData ? (this.edgeWaypointTransient.get(edgeData.id) ?? parseEdgeWaypoints(edgeData)) : [];
+    const display = runtimeEdge?.path?.display;
+    const svg = display?.ownerSVGElement;
+    if (selectedEdges.length !== 1 || !runtimeEdge || !edgeData || waypoints.length === 0 || !svg || !display || target.readonly) {
+      this.clearEdgeWaypointOverlay();
+      return;
+    }
+    this.clearEdgeWaypointOverlay();
+    const nodes = new Map(target.getData().nodes.map((node) => [node.id, node]));
+    const route = edgeRoutePoints(edgeData, nodes, waypoints);
+    const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    group.setAttribute('class', 'canvas-studio-edge-waypoint-overlay');
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('class', 'canvas-studio-edge-waypoint-path');
+    path.setAttribute('d', polylinePath(route));
+    group.appendChild(path);
+    waypoints.forEach((point, index) => {
+      const handle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      handle.setAttribute('class', 'canvas-studio-edge-waypoint-handle');
+      handle.setAttribute('cx', String(point.x));
+      handle.setAttribute('cy', String(point.y));
+      handle.setAttribute('r', '8');
+      handle.setAttribute('aria-label', `连线折点 ${index + 1}`);
+      handle.addEventListener('pointerdown', (event) => this.startEdgeWaypointDrag(event, target, edgeData.id, index));
+      handle.addEventListener('dblclick', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        this.removeEdgeWaypoint(target, edgeData.id, index);
+      });
+      group.appendChild(handle);
+    });
+    svg.appendChild(group);
+    display.classList.add('canvas-studio-edge-waypoint-hidden');
+    this.edgeWaypointOverlay = group;
+    this.edgeWaypointCanvas = target;
+    this.edgeWaypointDisplay = display;
+  }
+
+  private clearEdgeWaypointOverlay(): void {
+    this.edgeWaypointOverlay?.remove();
+    this.edgeWaypointOverlay = null;
+    this.edgeWaypointCanvas = null;
+    this.edgeWaypointDisplay?.classList.remove('canvas-studio-edge-waypoint-hidden');
+    this.edgeWaypointDisplay = null;
+  }
+
+  private startEdgeWaypointDrag(event: PointerEvent, canvas: RuntimeCanvas, edgeId: string, index: number): void {
+    if (canvas.readonly) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const edge = canvas.getData().edges.find((candidate) => candidate.id === edgeId);
+    if (!edge) return;
+    this.edgeWaypointTransient.set(edgeId, [...parseEdgeWaypoints(edge)]);
+    this.edgeWaypointDrag = { canvas, edgeId, index };
+  }
+
+  private handleEdgeWaypointPointerMove(event: PointerEvent): void {
+    const drag = this.edgeWaypointDrag;
+    if (!drag) return;
+    const points = this.edgeWaypointTransient.get(drag.edgeId);
+    if (!points?.[drag.index]) return;
+    const point = drag.canvas.posFromEvt?.(event) ?? this.componentDropPoint(drag.canvas, event.clientX, event.clientY);
+    points[drag.index] = point;
+    this.edgeWaypointTransient.set(drag.edgeId, points);
+    this.refreshEdgeWaypointOverlay(drag.canvas);
+  }
+
+  private handleEdgeWaypointPointerUp(): void {
+    const drag = this.edgeWaypointDrag;
+    if (!drag) return;
+    const points = this.edgeWaypointTransient.get(drag.edgeId);
+    this.edgeWaypointDrag = null;
+    if (points) this.persistEdgeWaypoints(drag.canvas, drag.edgeId, points);
+  }
+
+  private persistEdgeWaypoints(canvas: RuntimeCanvas, edgeId: string, points: EdgeWaypoint[]): void {
+    if (canvas.readonly) return;
+    const data = canvas.getData();
+    const nextData = {
+      ...data,
+      edges: data.edges.map((edge) => edge.id === edgeId
+        ? mergeEdgeStyle(edge, { [EDGE_WAYPOINTS_KEY]: serializeEdgeWaypoints(points) })
+        : edge)
+    };
+    this.edgeWaypointTransient.delete(edgeId);
+    replaceCanvasData(canvas, nextData);
+    window.setTimeout(() => this.refreshEdgeWaypointOverlay(canvas), 0);
+  }
+
+  private addEdgeWaypoint(): void {
+    const canvas = this.currentCanvas();
+    if (!canvas || canvas.readonly) return;
+    const [edge] = selectedEdgeData(canvas);
+    if (!edge) return;
+    const data = canvas.getData();
+    const points = edgeRoutePoints(edge, new Map(data.nodes.map((node) => [node.id, node])));
+    const next = addWaypointAtLongestSegment(points).slice(1, -1);
+    this.persistEdgeWaypoints(canvas, edge.id, next);
+  }
+
+  private clearEdgeWaypoints(): void {
+    const canvas = this.currentCanvas();
+    if (!canvas || canvas.readonly) return;
+    const [edge] = selectedEdgeData(canvas);
+    if (!edge) return;
+    this.persistEdgeWaypoints(canvas, edge.id, []);
+  }
+
+  private removeEdgeWaypoint(canvas: RuntimeCanvas, edgeId: string, index: number): void {
+    if (canvas.readonly) return;
+    const edge = canvas.getData().edges.find((candidate) => candidate.id === edgeId);
+    if (!edge) return;
+    const points = parseEdgeWaypoints(edge);
+    points.splice(index, 1);
+    this.persistEdgeWaypoints(canvas, edgeId, points);
   }
 
   private mountComponentDropTarget(canvas: RuntimeCanvas): void {

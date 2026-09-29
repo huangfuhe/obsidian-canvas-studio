@@ -28,6 +28,30 @@
   outline-offset: -4px;
 }
 
+.canvas-studio-edge-waypoint-hidden {
+  opacity: 0 !important;
+}
+
+.canvas-studio-edge-waypoint-path {
+  fill: none;
+  stroke: var(--interactive-accent);
+  stroke-width: 3;
+  stroke-dasharray: 8 5;
+  pointer-events: none;
+}
+
+.canvas-studio-edge-waypoint-handle {
+  fill: var(--interactive-accent);
+  stroke: var(--background-primary);
+  stroke-width: 3;
+  cursor: grab;
+  pointer-events: all;
+}
+
+.canvas-studio-edge-waypoint-handle:active {
+  cursor: grabbing;
+}
+
 .canvas-studio-component-drop-preview {
   position: fixed;
   z-index: 1000;

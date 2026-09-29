@@ -34,9 +34,16 @@ export interface RuntimeCanvasNode {
   startEditing?(): void;
 }
 
-interface RuntimeCanvasElement {
+export interface RuntimeCanvasElement {
   id: string;
   getData(): CanvasNodeData | CanvasEdgeData;
+}
+
+export interface RuntimeCanvasEdge extends RuntimeCanvasElement {
+  path?: {
+    display?: SVGPathElement;
+    interaction?: SVGPathElement;
+  };
 }
 
 export interface RuntimeCanvas {
@@ -61,6 +68,7 @@ export interface RuntimeCanvas {
   selectOnly?(node: RuntimeCanvasNode): void;
   deselectAll?(): void;
   zoomToSelection?(): void;
+  posFromEvt?(event: MouseEvent | PointerEvent): { x: number; y: number };
 }
 
 export function getCurrentCanvas(app: App): RuntimeCanvas | null {
@@ -91,6 +99,14 @@ export function selectedEdgeData(canvas: RuntimeCanvas): CanvasEdgeData[] {
 export function selectedRuntimeNodes(canvas: RuntimeCanvas): RuntimeCanvasNode[] {
   return [...canvas.selection]
     .filter((element): element is RuntimeCanvasNode => 'x' in element && 'y' in element);
+}
+
+export function selectedRuntimeEdges(canvas: RuntimeCanvas): RuntimeCanvasEdge[] {
+  return [...canvas.selection]
+    .filter((element): element is RuntimeCanvasEdge => {
+      const data = element.getData();
+      return 'fromNode' in data && 'toNode' in data;
+    });
 }
 
 export function replaceCanvasData(canvas: RuntimeCanvas, data: CanvasDocument): void {
