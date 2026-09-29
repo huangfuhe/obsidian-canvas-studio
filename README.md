@@ -348,6 +348,9 @@ Obsidian visual smoke exposed top-node overlap.
 The 0.9.90 patch applies that clearance after the host fit animation completes;
 the fix was verified with a direct X11 screenshot of a real Obsidian window.
 
+The 0.9.91 patch hardens mobile inspector scrolling and 44px touch targets for
+the newer table, drawing, media, and transform controls.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual

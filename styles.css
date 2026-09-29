@@ -682,6 +682,23 @@ body.is-mobile .canvas-studio-inspector {
   right: 8px;
   left: 8px;
   width: auto;
+  max-height: calc(100vh - 76px);
+  overflow-y: auto;
+}
+
+body.is-mobile .canvas-studio-inspector-field select,
+body.is-mobile .canvas-studio-inspector-field input,
+body.is-mobile .canvas-studio-inspector-field button,
+body.is-mobile .canvas-studio-inspector-footer button {
+  min-height: 44px;
+}
+
+body.is-mobile .canvas-studio-inspector-segmented {
+  flex-wrap: wrap;
+}
+
+body.is-mobile .canvas-studio-inspector-segmented button {
+  min-width: 88px;
 }
 
 body.is-mobile .canvas-studio-toolbar::-webkit-scrollbar {
