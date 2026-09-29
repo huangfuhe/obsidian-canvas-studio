@@ -208,3 +208,42 @@ export function insertTableColumnAfter(data: CanvasDocument, cellId: string, idF
     } : node).concat(cells)
   };
 }
+
+export function resizeTableCells(
+  data: CanvasDocument,
+  groupId: string,
+  size: { cellWidth?: number; cellHeight?: number }
+): CanvasDocument {
+  const group = data.nodes.find((node) => node.id === groupId && node.type === 'group');
+  if (!group) return data;
+  const metrics = tableMetrics(group);
+  if (!metrics) return data;
+  const cellWidth = size.cellWidth === undefined ? metrics.cellWidth : Math.max(80, Math.round(size.cellWidth));
+  const cellHeight = size.cellHeight === undefined ? metrics.cellHeight : Math.max(40, Math.round(size.cellHeight));
+  return {
+    ...data,
+    nodes: data.nodes.map((node) => {
+      if (node.id === group.id) return {
+        ...node,
+        width: metrics.columns * cellWidth,
+        height: metrics.rows * cellHeight,
+        styleAttributes: {
+          ...(node.styleAttributes ?? {}),
+          canvasStudioTableCellWidth: cellWidth,
+          canvasStudioTableCellHeight: cellHeight
+        }
+      };
+      if (node.styleAttributes?.canvasStudioTableId !== group.id) return node;
+      const row = Number(node.styleAttributes.canvasStudioTableRow);
+      const column = Number(node.styleAttributes.canvasStudioTableColumn);
+      if (!Number.isFinite(row) || !Number.isFinite(column)) return node;
+      return {
+        ...node,
+        x: group.x + column * cellWidth + 8,
+        y: group.y + row * cellHeight + 8,
+        width: cellWidth - 16,
+        height: cellHeight - 16
+      };
+    })
+  };
+}

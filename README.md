@@ -331,6 +331,9 @@ The 0.9.83 patch adds row/column insertion after a selected semantic table cell.
 The 0.9.84 patch adds selected-row/column deletion with index compaction and
 header-row protection.
 
+The 0.9.85 patch adds table cell width/height controls that reposition all
+semantic cells and resize the table group together.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual

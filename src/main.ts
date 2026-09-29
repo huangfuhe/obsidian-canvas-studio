@@ -42,7 +42,7 @@ import { snapNodePosition } from './snap';
 import { instantiateSwimlane, SWIMLANE_TEMPLATES } from './swimlane';
 import { FLOW_TEMPLATES, instantiateFlowTemplate } from './templates';
 import { applyCanvasTheme, CANVAS_THEMES } from './themes';
-import { addTableColumn, addTableRow, insertTableColumnAfter, insertTableRowAfter, removeLastTableColumn, removeLastTableRow, removeTableColumnAtCell, removeTableRowAtCell } from './table-actions';
+import { addTableColumn, addTableRow, insertTableColumnAfter, insertTableRowAfter, removeLastTableColumn, removeLastTableRow, removeTableColumnAtCell, removeTableRowAtCell, resizeTableCells } from './table-actions';
 import { canvasBackground, canvasGridEnabled, canvasMode, setCanvasBackground, setCanvasGrid, setCanvasMode, type CanvasBackground, type CanvasMode } from './canvas-view';
 import { COMPONENT_LIBRARY, componentsByCategory, filterComponents, type ComponentSpec } from './components';
 import { createSavedComponent, instantiateSavedComponent, type SavedCanvasComponent } from './saved-components';
@@ -903,6 +903,20 @@ export default class CanvasStudioPlugin extends Plugin {
       }
       if (groups.length === 1 && groups[0]?.styleAttributes?.canvasStudioTable === true) {
         const tableField = field('表格结构');
+        const tableSize = tableField.createDiv({ cls: 'canvas-studio-inspector-segmented' });
+        const cellWidth = tableSize.createEl('input', {
+          type: 'number',
+          value: String(groups[0].styleAttributes.canvasStudioTableCellWidth ?? 150),
+          attr: { min: '80', step: '10', 'aria-label': '单元格宽度' }
+        });
+        const cellHeight = tableSize.createEl('input', {
+          type: 'number',
+          value: String(groups[0].styleAttributes.canvasStudioTableCellHeight ?? 54),
+          attr: { min: '40', step: '6', 'aria-label': '单元格高度' }
+        });
+        const resizeTable = () => this.resizeSelectedTableCells(Number(cellWidth.value), Number(cellHeight.value));
+        cellWidth.addEventListener('change', resizeTable);
+        cellHeight.addEventListener('change', resizeTable);
         const tableActions = tableField.createDiv({ cls: 'canvas-studio-inspector-segmented' });
         const addRow = tableActions.createEl('button', { text: '新增行' });
         addRow.addEventListener('click', () => this.addSelectedTableDimension('row'));
@@ -2571,6 +2585,15 @@ export default class CanvasStudioPlugin extends Plugin {
       : addTableColumn(canvas.getData(), group.id, randomId);
     replaceCanvasData(canvas, nextData);
     new Notice(axis === 'row' ? '已新增表格行。' : '已新增表格列。', 1600);
+  }
+
+  private resizeSelectedTableCells(cellWidth: number, cellHeight: number): void {
+    const canvas = this.currentCanvas();
+    if (!canvas || canvas.readonly || !Number.isFinite(cellWidth) || !Number.isFinite(cellHeight)) return;
+    const [group] = this.selection(canvas).filter((node) => node.type === 'group' && node.styleAttributes?.canvasStudioTable === true);
+    if (!group) return;
+    replaceCanvasData(canvas, resizeTableCells(canvas.getData(), group.id, { cellWidth, cellHeight }));
+    new Notice('已调整表格单元格尺寸。', 1600);
   }
 
   private removeSelectedTableDimension(axis: 'row' | 'column'): void {
