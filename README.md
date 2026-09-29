@@ -250,6 +250,9 @@ The 0.9.57 patch adds persistent mind-map branch collapse/expand. Descendant
 nodes and their runtime edges are hidden or restored without changing Canvas
 node types.
 
+The 0.9.58 patch aligns the development status documents with the current
+0.9.x implementation and verification scope.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual
