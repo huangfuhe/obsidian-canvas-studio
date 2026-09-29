@@ -88,11 +88,21 @@ export const COMPONENT_LIBRARY: ComponentSpec[] = [
       const rows = 4;
       const cellWidth = 150;
       const cellHeight = 54;
-      const nodes: CanvasNodeData[] = [groupNode(idFactory('group'), '表格', origin.x, origin.y, columns * cellWidth, rows * cellHeight, '5')];
+      const groupId = idFactory('group');
+      const group = groupNode(groupId, '表格', origin.x, origin.y, columns * cellWidth, rows * cellHeight, '5');
+      group.styleAttributes = {
+        ...(group.styleAttributes ?? {}),
+        canvasStudioTable: true,
+        canvasStudioTableRows: rows,
+        canvasStudioTableColumns: columns,
+        canvasStudioTableCellWidth: cellWidth,
+        canvasStudioTableCellHeight: cellHeight
+      };
+      const nodes: CanvasNodeData[] = [group];
       for (let row = 0; row < rows; row += 1) {
         for (let column = 0; column < columns; column += 1) {
           const isHeader = row === 0;
-          nodes.push(textNode(
+          const cell = textNode(
             idFactory('node'),
             isHeader ? `列 ${column + 1}` : `单元格 ${row}-${column + 1}`,
             origin.x + column * cellWidth + 8,
@@ -101,7 +111,14 @@ export const COMPONENT_LIBRARY: ComponentSpec[] = [
             cellHeight - 16,
             { shape: 'rectangle', textAlign: 'center', padding: 8, fontSize: isHeader ? 15 : 14, fontWeight: isHeader ? 700 : 400 },
             isHeader ? '5' : undefined
-          ));
+          );
+          cell.styleAttributes = {
+            ...(cell.styleAttributes ?? {}),
+            canvasStudioTableId: groupId,
+            canvasStudioTableRow: row,
+            canvasStudioTableColumn: column
+          };
+          nodes.push(cell);
         }
       }
       return { nodes, edges: [] };

@@ -42,6 +42,7 @@ import { snapNodePosition } from './snap';
 import { instantiateSwimlane, SWIMLANE_TEMPLATES } from './swimlane';
 import { FLOW_TEMPLATES, instantiateFlowTemplate } from './templates';
 import { applyCanvasTheme, CANVAS_THEMES } from './themes';
+import { addTableColumn, addTableRow } from './table-actions';
 import { canvasBackground, canvasGridEnabled, canvasMode, setCanvasBackground, setCanvasGrid, setCanvasMode, type CanvasBackground, type CanvasMode } from './canvas-view';
 import { COMPONENT_LIBRARY, componentsByCategory, filterComponents, type ComponentSpec } from './components';
 import { createSavedComponent, instantiateSavedComponent, type SavedCanvasComponent } from './saved-components';
@@ -886,6 +887,14 @@ export default class CanvasStudioPlugin extends Plugin {
           cls: 'canvas-studio-inspector-action'
         });
         collapse.addEventListener('click', () => this.toggleSelectedGroupCollapse());
+      }
+      if (groups.length === 1 && groups[0]?.styleAttributes?.canvasStudioTable === true) {
+        const tableField = field('表格结构');
+        const tableActions = tableField.createDiv({ cls: 'canvas-studio-inspector-segmented' });
+        const addRow = tableActions.createEl('button', { text: '新增行' });
+        addRow.addEventListener('click', () => this.addSelectedTableDimension('row'));
+        const addColumn = tableActions.createEl('button', { text: '新增列' });
+        addColumn.addEventListener('click', () => this.addSelectedTableDimension('column'));
       }
     }
 
@@ -2523,6 +2532,18 @@ export default class CanvasStudioPlugin extends Plugin {
       height: heights.get(node.id) ?? node.height
     })));
     new Notice(`已调整 ${heights.size} 个文本节点高度。`, 1600);
+  }
+
+  private addSelectedTableDimension(axis: 'row' | 'column'): void {
+    const canvas = this.currentCanvas();
+    if (!canvas || canvas.readonly) return;
+    const [group] = this.selection(canvas).filter((node) => node.type === 'group' && node.styleAttributes?.canvasStudioTable === true);
+    if (!group) return;
+    const nextData = axis === 'row'
+      ? addTableRow(canvas.getData(), group.id, randomId)
+      : addTableColumn(canvas.getData(), group.id, randomId);
+    replaceCanvasData(canvas, nextData);
+    new Notice(axis === 'row' ? '已新增表格行。' : '已新增表格列。', 1600);
   }
 
   private fitSelectedGroups(): void {

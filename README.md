@@ -312,6 +312,9 @@ stroke without modifying Canvas nodes or edges.
 The 0.9.77 patch adds a rendered-content height fit action for selected text
 nodes, preserving their width and position.
 
+The 0.9.78 patch adds semantic table row/column metadata and inspector actions
+for appending rows and columns to native group/text tables.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual
