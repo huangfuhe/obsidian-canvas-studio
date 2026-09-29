@@ -219,6 +219,9 @@ reflowing selected lanes and moving their contained nodes together.
 The 0.9.47 patch adds explicit mixed-selection adoption: selected nodes can be
 moved into the selected swimlane while keeping their relative arrangement.
 
+The 0.9.48 patch adds node rotation, horizontal/vertical flipping, and layer
+ordering controls in the contextual inspector.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual

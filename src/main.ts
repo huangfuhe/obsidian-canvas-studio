@@ -25,6 +25,7 @@ import { arrangeNodes, type ArrangeMode } from './arrange';
 import { alignCanvasEdges, mergeEdgeStyle, mergeNodeStyle, safeInsertionOrigin, updateNodes } from './canvas-data';
 import { connectNodes } from './edge-actions';
 import { deleteSelection, duplicateSelection } from './selection-actions';
+import { reorderNodes, type LayerAction } from './object-actions';
 import { describeSelectionContext, isContextualActionHidden } from './selection-context';
 import { diagnoseCanvas, type CanvasHealthIssue } from './diagnostics';
 import { moveGroupChildren } from './group-follow';
@@ -782,6 +783,25 @@ export default class CanvasStudioPlugin extends Plugin {
     const currentOpacity = nodes[0]?.styleAttributes?.opacity;
     opacity.value = typeof currentOpacity === 'number' && currentOpacity >= 0 && currentOpacity <= 1 ? String(currentOpacity) : '1';
     opacity.addEventListener('change', () => this.applyStyle({ opacity: Number(opacity.value) }));
+
+    const transformField = field('变换');
+    const rotation = transformField.createEl('select', { attr: { 'aria-label': '旋转角度' } });
+    for (const value of [0, 90, 180, 270]) rotation.createEl('option', { value: String(value), text: `旋转 ${value}°` });
+    const currentRotation = nodes[0]?.styleAttributes?.rotation;
+    rotation.value = typeof currentRotation === 'number' ? String(((currentRotation % 360) + 360) % 360) : '0';
+    rotation.addEventListener('change', () => this.applyStyle({ rotation: Number(rotation.value) }));
+    const flipActions = transformField.createDiv({ cls: 'canvas-studio-inspector-segmented' });
+    const flipX = flipActions.createEl('button', { text: '水平翻转' });
+    flipX.addEventListener('click', () => this.applyStyle({ flipX: nodes.every((node) => node.styleAttributes?.flipX === true) ? false : true }));
+    const flipY = flipActions.createEl('button', { text: '垂直翻转' });
+    flipY.addEventListener('click', () => this.applyStyle({ flipY: nodes.every((node) => node.styleAttributes?.flipY === true) ? false : true }));
+
+    const layerField = field('层级');
+    const layerActions = layerField.createDiv({ cls: 'canvas-studio-inspector-segmented' });
+    for (const [action, label] of [['front', '置顶'], ['back', '置底'], ['forward', '上移一层'], ['backward', '下移一层']] as const) {
+      const button = layerActions.createEl('button', { text: label });
+      button.addEventListener('click', () => this.reorderSelectedNodes(action));
+    }
 
     const lockField = field('节点状态');
     const lock = lockField.createEl('label', { cls: 'canvas-studio-inspector-check' });
@@ -1784,6 +1804,14 @@ export default class CanvasStudioPlugin extends Plugin {
     new Notice(`已将 ${nodeIds.size} 个节点移入泳道。`, 1800);
   }
 
+  private reorderSelectedNodes(action: LayerAction): void {
+    const canvas = this.currentCanvas();
+    if (!canvas || canvas.readonly) return;
+    const ids = new Set(this.selection(canvas).map((node) => node.id));
+    if (ids.size === 0) return;
+    replaceCanvasData(canvas, reorderNodes(canvas.getData(), ids, action));
+  }
+
   private groupSelection(): void {
     const canvas = this.currentCanvas();
     if (!canvas || canvas.readonly) return;
@@ -2309,6 +2337,13 @@ export default class CanvasStudioPlugin extends Plugin {
       if (value === undefined || value === null || value === '') element.style.removeProperty(property);
       else element.style.setProperty(property, `${String(value)}${unit}`);
     }
+    const rotation = typeof style.rotation === 'number' ? ((style.rotation % 360) + 360) % 360 : 0;
+    if (rotation === 0) element.style.removeProperty('rotate');
+    else element.style.setProperty('rotate', `${rotation}deg`);
+    const scaleX = style.flipX === true ? -1 : 1;
+    const scaleY = style.flipY === true ? -1 : 1;
+    if (scaleX === 1 && scaleY === 1) element.style.removeProperty('scale');
+    else element.style.setProperty('scale', `${scaleX} ${scaleY}`);
     element.toggleClass('canvas-studio-underlined', style.textDecoration === 'underline');
   }
 
@@ -2325,6 +2360,8 @@ export default class CanvasStudioPlugin extends Plugin {
       '--canvas-studio-padding',
       '--canvas-studio-opacity'
     ]) element.style.removeProperty(property);
+    element.style.removeProperty('rotate');
+    element.style.removeProperty('scale');
     element.removeClass('canvas-studio-underlined');
   }
 }
