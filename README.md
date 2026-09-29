@@ -172,6 +172,9 @@ explicit end-presentation command.
 The 0.9.33 development build adds native selection duplication with internal
 edge remapping and a `Ctrl/Cmd+D` shortcut.
 
+The 0.9.34 development build adds validated Vault-path editing for selected
+file nodes.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual

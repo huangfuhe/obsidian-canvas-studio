@@ -606,6 +606,17 @@ export default class CanvasStudioPlugin extends Plugin {
       title.addEventListener('change', () => this.applyLinkProperties(undefined, title.value));
     }
 
+    const files = nodes.filter((node) => node.type === 'file');
+    if (files.length === 1) {
+      const fileField = field('Vault 文件路径');
+      const filePath = fileField.createEl('input', {
+        type: 'text',
+        value: files[0]?.file ?? '',
+        attr: { placeholder: '例如：assets/diagram.png', 'aria-label': 'Vault 文件路径' }
+      });
+      filePath.addEventListener('change', () => this.applyFilePath(filePath.value));
+    }
+
     const groups = nodes.filter((node) => node.type === 'group');
     if (groups.length > 0) {
       const titleField = field('分组标题');
@@ -1459,6 +1470,20 @@ export default class CanvasStudioPlugin extends Plugin {
       ...(nextUrl ? { url: nextUrl } : {}),
       ...(title === undefined ? {} : { text: title.trim() || nextUrl || node.text })
     })));
+  }
+
+  private applyFilePath(path: string): void {
+    const canvas = this.currentCanvas();
+    if (!canvas || canvas.readonly) return;
+    const [fileNode] = this.selection(canvas).filter((node) => node.type === 'file');
+    const normalized = path.trim();
+    if (!fileNode || !normalized) return;
+    const abstract = this.app.vault.getAbstractFileByPath(normalized);
+    if (!(abstract instanceof TFile)) {
+      new Notice('Vault 中没有找到该文件。', 2500);
+      return;
+    }
+    replaceCanvasData(canvas, updateNodes(canvas.getData(), new Set([fileNode.id]), (node) => ({ ...node, file: normalized })));
   }
 
   private resizeSelectedGroups(width: number, height: number): void {
