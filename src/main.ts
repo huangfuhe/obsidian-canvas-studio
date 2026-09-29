@@ -76,6 +76,8 @@ const DEFAULT_SETTINGS: CanvasStudioSettings = {
 };
 
 const TOOLBAR_ACTIONS = [
+  { id: 'undo', icon: 'undo-2', label: '撤销', shortLabel: '撤销' },
+  { id: 'redo', icon: 'redo-2', label: '重做', shortLabel: '重做' },
   { id: 'text', icon: 'text-cursor-input', label: '创建文本卡片', shortLabel: '文本' },
   { id: 'note', icon: 'sticky-note', label: '创建便签', shortLabel: '便签' },
   { id: 'draw', icon: 'pencil', label: '手绘模式', shortLabel: '手绘' },
@@ -151,6 +153,16 @@ export default class CanvasStudioPlugin extends Plugin {
       name: 'Canvas Studio: 创建子节点',
       checkCallback: (checking) => this.commandAvailability(checking, () => this.createChildNode())
     });
+    for (const [id, name, commandId] of [
+      ['undo', 'Canvas Studio: 撤销', 'editor:undo'],
+      ['redo', 'Canvas Studio: 重做', 'editor:redo']
+    ] as const) {
+      this.addCommand({
+        id,
+        name,
+        checkCallback: (checking) => this.commandAvailability(checking, () => this.runObsidianCommand(commandId))
+      });
+    }
     this.addCommand({
       id: 'create-text-card',
       name: 'Canvas Studio: 创建文本卡片',
@@ -520,6 +532,8 @@ export default class CanvasStudioPlugin extends Plugin {
 
   private handleToolbarAction(actionId: ToolbarActionId, anchor: HTMLElement): void {
     switch (actionId) {
+      case 'undo': this.runObsidianCommand('editor:undo'); break;
+      case 'redo': this.runObsidianCommand('editor:redo'); break;
       case 'text': this.insertBasicTextNode('text'); break;
       case 'note': this.insertBasicTextNode('sticky-note'); break;
       case 'draw': this.toggleDrawingMode(); break;
@@ -1537,6 +1551,15 @@ export default class CanvasStudioPlugin extends Plugin {
     const commands = (this.app as unknown as { commands?: { commands?: Record<string, unknown>; executeCommandById?: (id: string) => boolean } }).commands;
     if (!commands?.commands?.[commandId] || !commands.executeCommandById) {
       new Notice('当前未检测到 Advanced Canvas 对应能力。', 3000);
+      return;
+    }
+    commands.executeCommandById(commandId);
+  }
+
+  private runObsidianCommand(commandId: string): void {
+    const commands = (this.app as unknown as { commands?: { commands?: Record<string, unknown>; executeCommandById?: (id: string) => boolean } }).commands;
+    if (!commands?.commands?.[commandId] || !commands.executeCommandById) {
+      new Notice(`当前宿主未提供命令：${commandId}`, 2200);
       return;
     }
     commands.executeCommandById(commandId);

@@ -196,7 +196,13 @@ Studio metadata, with an explicit clear-strokes action.
 The 0.9.41 patch adds a localStorage fallback for component identity during
 cross-window drag operations.
 
+The 0.9.42 patch adds toolbar and command-palette entries for undo and redo,
+delegating to Obsidian's native editor commands.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual
 properties in `styleAttributes`. It does not create a second content file.
+This is a local single-user whiteboard plugin; multiplayer editing,
+collaboration cursors, comments, mentions, and realtime synchronization are
+intentionally out of scope.
