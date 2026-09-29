@@ -136,6 +136,9 @@ and display title.
 The 0.9.21 patch enables the documented Canvas shortcuts for mind-map layout
 and format copy/paste while leaving text-editor shortcuts untouched.
 
+The 0.9.22 development build adds standalone native text-card and sticky-note
+creation, entering edit mode immediately after insertion.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual

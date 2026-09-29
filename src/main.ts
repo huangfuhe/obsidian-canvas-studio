@@ -41,6 +41,7 @@ import { COMPONENT_LIBRARY, componentsByCategory, type ComponentSpec } from './c
 import { createSavedComponent, instantiateSavedComponent, type SavedCanvasComponent } from './saved-components';
 import { filterMediaItems, mediaItemsFromPaths, type MediaKind, type MediaItem } from './media';
 import { createLinkNode, normalizeLinkUrl } from './links';
+import { createBasicTextNode, type BasicTextKind } from './basic-nodes';
 import { clientPointToCanvas, parseCssTransform } from './canvas-position';
 import { addWaypointAtLongestSegment, edgeRoutePoints, EDGE_WAYPOINTS_KEY, parseEdgeWaypoints, polylinePath, routeEdgeWithObstacles, serializeEdgeWaypoints, type EdgeWaypoint } from './edge-waypoints';
 import type { CanvasDocument, CanvasEdgeData, CanvasNodeData, CanvasStyleAttributes, LayoutDirection } from './types';
@@ -70,6 +71,8 @@ const DEFAULT_SETTINGS: CanvasStudioSettings = {
 };
 
 const TOOLBAR_ACTIONS = [
+  { id: 'text', icon: 'text-cursor-input', label: '创建文本卡片', shortLabel: '文本' },
+  { id: 'note', icon: 'sticky-note', label: '创建便签', shortLabel: '便签' },
   { id: 'create-child', icon: 'git-branch', label: '创建子节点', shortLabel: '子节点' },
   { id: 'create-sibling', icon: 'git-merge', label: '创建同级节点', shortLabel: '同级' },
   { id: 'layout', icon: 'layout-dashboard', label: '自动布局思维导图', shortLabel: '布局' },
@@ -126,6 +129,16 @@ export default class CanvasStudioPlugin extends Plugin {
       id: 'create-child-node',
       name: 'Canvas Studio: 创建子节点',
       checkCallback: (checking) => this.commandAvailability(checking, () => this.createChildNode())
+    });
+    this.addCommand({
+      id: 'create-text-card',
+      name: 'Canvas Studio: 创建文本卡片',
+      checkCallback: (checking) => this.commandAvailability(checking, () => this.insertBasicTextNode('text'))
+    });
+    this.addCommand({
+      id: 'create-sticky-note',
+      name: 'Canvas Studio: 创建便签',
+      checkCallback: (checking) => this.commandAvailability(checking, () => this.insertBasicTextNode('sticky-note'))
     });
     this.addCommand({
       id: 'create-sibling-node',
@@ -425,6 +438,8 @@ export default class CanvasStudioPlugin extends Plugin {
 
   private handleToolbarAction(actionId: ToolbarActionId, anchor: HTMLElement): void {
     switch (actionId) {
+      case 'text': this.insertBasicTextNode('text'); break;
+      case 'note': this.insertBasicTextNode('sticky-note'); break;
       case 'create-child': this.createChildNode(); break;
       case 'create-sibling': this.createSiblingNode(); break;
       case 'layout': this.layoutMindMap(); break;
@@ -956,6 +971,24 @@ export default class CanvasStudioPlugin extends Plugin {
       edges: [...data.edges, edge]
     });
     return nodeId;
+  }
+
+  private insertBasicTextNode(kind: BasicTextKind): void {
+    const canvas = this.currentCanvas();
+    if (!canvas || canvas.readonly) return;
+    const data = canvas.getData();
+    const node = createBasicTextNode(
+      randomId(kind === 'sticky-note' ? 'note' : 'text'),
+      kind,
+      safeInsertionOrigin(data, true),
+      this.settings.defaultFontFamily,
+      this.settings.defaultFontSize
+    );
+    replaceCanvasData(canvas, { ...data, nodes: [...data.nodes, node] });
+    window.setTimeout(() => {
+      this.focusNode(canvas, node.id);
+      canvas.nodes.get(node.id)?.startEditing?.();
+    }, 0);
   }
 
   private createChildNode(): void {
