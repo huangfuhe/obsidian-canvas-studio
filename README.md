@@ -265,6 +265,9 @@ The 0.9.61 documentation check also verified the decision-branch template at
 runtime: six native text nodes, six edges, five flowchart shapes, and `是`/`否`
 edge labels were written to an isolated Canvas.
 
+The 0.9.62 patch exposes explicit `开始` and `结束` flowchart entries while
+retaining the native pill shape and recording an optional flow role.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual
