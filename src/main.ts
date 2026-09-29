@@ -46,7 +46,7 @@ import { addTableColumn, addTableRow, insertTableColumnAfter, insertTableRowAfte
 import { canvasBackground, canvasGridEnabled, canvasMode, setCanvasBackground, setCanvasGrid, setCanvasMode, type CanvasBackground, type CanvasMode } from './canvas-view';
 import { COMPONENT_LIBRARY, componentsByCategory, filterComponents, type ComponentSpec } from './components';
 import { createSavedComponent, instantiateSavedComponent, type SavedCanvasComponent } from './saved-components';
-import { filterMediaItems, mediaItemsFromPaths, type MediaKind, type MediaItem } from './media';
+import { classifyMediaPath, filterMediaItems, mediaItemsFromPaths, type MediaKind, type MediaItem } from './media';
 import { createLinkNode, normalizeLinkUrl } from './links';
 import { createBasicTextNode, createShapeNode, fittedTextNodeHeight, type BasicShape, type BasicTextKind } from './basic-nodes';
 import { canvasPointToClient, clientPointToCanvas, parseCssTransform } from './canvas-position';
@@ -819,6 +819,13 @@ export default class CanvasStudioPlugin extends Plugin {
         attr: { placeholder: '例如：assets/diagram.png', 'aria-label': 'Vault 文件路径' }
       });
       filePath.addEventListener('change', () => this.applyFilePath(filePath.value));
+      const file = files[0];
+      const kind = typeof file?.file === 'string' ? classifyMediaPath(file.file) : null;
+      const mediaSummary = field('素材信息');
+      mediaSummary.createDiv({ cls: 'canvas-studio-inspector-detail', text: `${kind === 'image' ? '图片' : kind === 'vector' ? 'SVG' : kind === 'pdf' ? 'PDF' : '文件'} · ${file?.file ?? ''}` });
+      const mediaActions = mediaSummary.createDiv({ cls: 'canvas-studio-inspector-segmented' });
+      const fitMedia = mediaActions.createEl('button', { text: '恢复默认尺寸' });
+      fitMedia.addEventListener('click', () => this.resetSelectedFileSize(kind));
     }
 
     const groups = nodes.filter((node) => node.type === 'group');
@@ -2048,6 +2055,16 @@ export default class CanvasStudioPlugin extends Plugin {
       return;
     }
     replaceCanvasData(canvas, updateNodes(canvas.getData(), new Set([fileNode.id]), (node) => ({ ...node, file: normalized })));
+  }
+
+  private resetSelectedFileSize(kind: MediaKind | null): void {
+    const canvas = this.currentCanvas();
+    if (!canvas || canvas.readonly) return;
+    const [fileNode] = this.selection(canvas).filter((node) => node.type === 'file');
+    if (!fileNode) return;
+    const size = kind === 'pdf' ? { width: 440, height: 180 } : kind === 'image' || kind === 'vector' ? { width: 360, height: 260 } : { width: 360, height: 180 };
+    replaceCanvasData(canvas, updateNodes(canvas.getData(), new Set([fileNode.id]), (node) => ({ ...node, ...size })));
+    new Notice('已恢复素材默认尺寸。', 1600);
   }
 
   private resizeSelectedGroups(width: number, height: number): void {

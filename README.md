@@ -334,6 +334,9 @@ header-row protection.
 The 0.9.85 patch adds table cell width/height controls that reposition all
 semantic cells and resize the table group together.
 
+The 0.9.86 patch adds media/file type readback and a default-size reset action
+for selected native file nodes.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual
