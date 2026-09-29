@@ -148,6 +148,9 @@ with geometry-aware anchors and duplicate-edge protection.
 The 0.9.25 patch fixes the component library filter so built-in components are
 shown together with saved components.
 
+The 0.9.26 patch unifies built-in and saved-component categorization and search
+in the actual modal renderer.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual
