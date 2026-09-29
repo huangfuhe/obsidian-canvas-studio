@@ -151,6 +151,9 @@ shown together with saved components.
 The 0.9.26 patch unifies built-in and saved-component categorization and search
 in the actual modal renderer.
 
+The 0.9.27 patch resolves drag targets by the Canvas wrapper under the pointer,
+so component drops work correctly in split-view canvases.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual

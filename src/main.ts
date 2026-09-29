@@ -114,6 +114,7 @@ export default class CanvasStudioPlugin extends Plugin {
   private pendingTextSelection: TextSelectionSnapshot | null = null;
   private snappingNodeIds = new Set<string>();
   private componentDropCanvas: RuntimeCanvas | null = null;
+  private componentPreviewCanvas: RuntimeCanvas | null = null;
   private componentDropPreview: HTMLElement | null = null;
   private activeComponentDragId: string | null = null;
   private edgeWaypointOverlay: SVGGElement | null = null;
@@ -854,19 +855,21 @@ export default class CanvasStudioPlugin extends Plugin {
   }
 
   private handleComponentDragOver(event: DragEvent): void {
-    const canvas = this.componentDropCanvas;
+    const canvas = this.canvasAtEventTarget(event.target) ?? this.componentDropCanvas;
     if (!canvas || canvas.readonly || !event.dataTransfer?.types.includes(COMPONENT_MIME)) return;
     const componentId = event.dataTransfer.getData(COMPONENT_MIME) || this.activeComponentDragId;
     const component = this.availableComponents().find((candidate) => candidate.id === componentId);
     if (!component) return;
     event.preventDefault();
     event.dataTransfer.dropEffect = 'copy';
+    this.componentPreviewCanvas?.wrapperEl?.classList.remove('canvas-studio-component-drop-target');
+    this.componentPreviewCanvas = canvas;
     canvas.wrapperEl?.classList.add('canvas-studio-component-drop-target');
     this.showComponentDropPreview(component.name, event.clientX, event.clientY);
   }
 
   private handleComponentDrop(event: DragEvent): void {
-    const canvas = this.componentDropCanvas;
+    const canvas = this.canvasAtEventTarget(event.target) ?? this.componentDropCanvas;
     if (!canvas || canvas.readonly || !event.dataTransfer?.types.includes(COMPONENT_MIME)) return;
     const componentId = event.dataTransfer.getData(COMPONENT_MIME) || this.activeComponentDragId;
     const component = this.availableComponents().find((candidate) => candidate.id === componentId);
@@ -874,6 +877,21 @@ export default class CanvasStudioPlugin extends Plugin {
     event.preventDefault();
     this.clearComponentDropPreview();
     this.insertComponentAt(component, this.componentDropPoint(canvas, event.clientX, event.clientY));
+  }
+
+  private canvasAtEventTarget(target: EventTarget | null): RuntimeCanvas | null {
+    if (!(target instanceof HTMLElement)) return null;
+    const wrapper = target.closest('.canvas-wrapper');
+    if (!wrapper) return null;
+    let result: RuntimeCanvas | null = null;
+    const workspace = this.app.workspace as unknown as {
+      iterateAllLeaves?: (callback: (leaf: { view?: unknown }) => void) => void;
+    };
+    workspace.iterateAllLeaves?.((leaf) => {
+      const canvas = (leaf.view as { canvas?: RuntimeCanvas } | undefined)?.canvas;
+      if (canvas?.wrapperEl === wrapper) result = canvas;
+    });
+    return result;
   }
 
   private showComponentDropPreview(name: string, clientX: number, clientY: number): void {
@@ -887,8 +905,10 @@ export default class CanvasStudioPlugin extends Plugin {
 
   private clearComponentDropPreview(): void {
     this.componentDropCanvas?.wrapperEl?.classList.remove('canvas-studio-component-drop-target');
+    this.componentPreviewCanvas?.wrapperEl?.classList.remove('canvas-studio-component-drop-target');
     this.componentDropPreview?.remove();
     this.componentDropPreview = null;
+    this.componentPreviewCanvas = null;
   }
 
   private beginComponentDrag(componentId: string): void {
