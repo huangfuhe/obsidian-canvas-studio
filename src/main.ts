@@ -1826,6 +1826,9 @@ class CanvasInfoModal extends Modal {
 }
 
 class ComponentLibraryModal extends Modal {
+  private searchInput!: HTMLInputElement;
+  private componentList!: HTMLElement;
+
   constructor(
     app: CanvasStudioPlugin['app'],
     private readonly insert: (component: ComponentSpec) => void,
@@ -1843,12 +1846,31 @@ class ComponentLibraryModal extends Modal {
       const save = this.contentEl.createEl('button', { text: '保存当前选区为组件', cls: 'mod-cta canvas-studio-component-save' });
       save.addEventListener('click', () => { this.close(); this.saveSelection?.(); });
     }
+    this.searchInput = this.contentEl.createEl('input', {
+      type: 'search',
+      cls: 'canvas-studio-component-search',
+      attr: { placeholder: '搜索组件名称、分类或说明', 'aria-label': '搜索组件' }
+    });
+    this.componentList = this.contentEl.createDiv({ cls: 'canvas-studio-component-list' });
+    this.searchInput.addEventListener('input', () => this.renderComponents());
+    this.renderComponents();
+  }
+
+  private renderComponents(): void {
+    this.componentList.empty();
     const builtInIds = new Set(COMPONENT_LIBRARY.map((component) => component.id));
     const extra = this.components.filter((component) => !builtInIds.has(component.id));
-    for (const [category, components] of componentsByCategory(extra)) {
-      this.contentEl.createEl('h3', { text: category, cls: 'canvas-studio-component-category' });
-      const grid = this.contentEl.createDiv({ cls: 'canvas-studio-component-grid' });
-      for (const component of components) {
+    const query = this.searchInput.value.trim().toLocaleLowerCase();
+    const categories = componentsByCategory(extra);
+    let rendered = 0;
+    for (const [category, components] of categories) {
+      const visible = components.filter((component) => !query
+        || `${component.name} ${component.category} ${component.description}`.toLocaleLowerCase().includes(query));
+      if (visible.length === 0) continue;
+      rendered += visible.length;
+      this.componentList.createEl('h3', { text: category, cls: 'canvas-studio-component-category' });
+      const grid = this.componentList.createDiv({ cls: 'canvas-studio-component-grid' });
+      for (const component of visible) {
         const button = grid.createEl('button', { cls: 'canvas-studio-component-card', attr: { draggable: 'true' } });
         button.draggable = true;
         setIcon(button, component.id === 'button' ? 'square-mouse-pointer' : component.id === 'input' ? 'text-cursor-input' : component.id === 'tag' ? 'tag' : component.id === 'info-card' ? 'panel-top' : 'triangle-alert');
@@ -1867,6 +1889,7 @@ class ComponentLibraryModal extends Modal {
         });
       }
     }
+    if (rendered === 0) this.componentList.createDiv({ cls: 'canvas-studio-component-empty', text: '没有匹配的组件。' });
   }
 
   override onClose(): void {

@@ -120,6 +120,9 @@ container removal that preserves the lane contents.
 The 0.9.16 development build adds horizontal and vertical batch lane arranging
 for multi-selected groups.
 
+The 0.9.17 patch fixes built-in component visibility in the component library
+and adds component search with an empty-state message.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual

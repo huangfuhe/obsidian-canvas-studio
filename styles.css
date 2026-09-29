@@ -387,6 +387,19 @@
   margin-bottom: 10px;
 }
 
+.canvas-studio-component-search {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+.canvas-studio-component-empty {
+  padding: 28px 12px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
 .canvas-studio-media-modal {
   width: min(760px, calc(100vw - 32px));
 }
