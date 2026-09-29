@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.21 - 2026-09-29
+
+### Fixed
+
+- 启用 Canvas 非文本编辑状态下的快捷键：`Ctrl/Cmd + Shift + L` 自动布局，`Ctrl/Cmd + Alt + C/V` 复制/粘贴格式。
+
 ## 0.9.20 - 2026-09-29
 
 ### Added

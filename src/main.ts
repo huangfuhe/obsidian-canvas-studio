@@ -279,12 +279,33 @@ export default class CanvasStudioPlugin extends Plugin {
   }
 
   private handleKeydown(event: KeyboardEvent): void {
-    if (event.defaultPrevented || event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return;
+    if (event.defaultPrevented || event.isComposing) return;
     const canvas = getCurrentCanvas(this.app);
     if (!canvas || canvas.readonly) return;
     const target = event.target;
     if (!(target instanceof Node) || !canvas.wrapperEl?.contains(target)) return;
     if (target instanceof HTMLElement && target.closest('input, textarea, [contenteditable="true"], .cm-editor')) return;
+
+    const modifier = event.ctrlKey || event.metaKey;
+    if (modifier && event.shiftKey && event.key.toLocaleLowerCase() === 'l' && !event.altKey) {
+      event.preventDefault();
+      this.layoutMindMap();
+      return;
+    }
+    if (modifier && event.altKey && !event.shiftKey) {
+      const key = event.key.toLocaleLowerCase();
+      if (key === 'c') {
+        event.preventDefault();
+        this.copyStyle();
+        return;
+      }
+      if (key === 'v') {
+        event.preventDefault();
+        this.pasteStyle();
+        return;
+      }
+    }
+    if (event.ctrlKey || event.metaKey || event.altKey) return;
     const selected = selectedRuntimeNodes(canvas);
     if (selected.length !== 1 || selected[0]?.isEditing) return;
 

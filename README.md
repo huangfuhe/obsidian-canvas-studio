@@ -133,6 +133,9 @@ Obsidian, and mailto URLs.
 The 0.9.20 development build adds contextual editing for a link node's address
 and display title.
 
+The 0.9.21 patch enables the documented Canvas shortcuts for mind-map layout
+and format copy/paste while leaving text-editor shortcuts untouched.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual
