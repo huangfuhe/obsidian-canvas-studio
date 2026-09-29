@@ -32,7 +32,7 @@ import { moveGroupChildren } from './group-follow';
 import { fitGroupsToChildren } from './group-layout';
 import { groupNodes, resizeGroups, ungroupNodes, updateGroupProperties } from './group-actions';
 import { snapFragmentIntoGroup, snapNodeIntoGroup } from './group-snap';
-import { arrangeLanes, duplicateGroupAsLane, moveGroupLane, moveNodesIntoGroup, removeGroupContainer, setLaneAxis, type LaneAxis } from './lane-actions';
+import { addEmptyLane, arrangeLanes, duplicateGroupAsLane, moveGroupLane, moveNodesIntoGroup, removeGroupContainer, setLaneAxis, type LaneAxis } from './lane-actions';
 import { computeMindMapLayout, moveNodesToLayout } from './layout';
 import { outlineToCanvas, parseMarkdownOutline } from './outline';
 import { findCanvasMatches, replaceAllMatches, replaceCurrentMatch, type CanvasSearchMatch } from './search';
@@ -743,6 +743,10 @@ export default class CanvasStudioPlugin extends Plugin {
       }
       if (groups.length === 1) {
         const laneActions = layoutField.createDiv({ cls: 'canvas-studio-inspector-segmented' });
+        const addLane = laneActions.createEl('button', {
+          text: currentAxis === 'row' ? '新增下方空泳道' : '新增右侧空泳道'
+        });
+        addLane.addEventListener('click', () => this.addEmptySelectedLane(currentAxis === 'row' ? 'down' : 'right'));
         const rightLane = laneActions.createEl('button', { text: '复制到右侧' });
         rightLane.addEventListener('click', () => this.duplicateSelectedLane('right'));
         const downLane = laneActions.createEl('button', { text: '复制到下方' });
@@ -1784,6 +1788,15 @@ export default class CanvasStudioPlugin extends Plugin {
     if (!group) return;
     replaceCanvasData(canvas, duplicateGroupAsLane(canvas.getData(), group.id, direction, randomId));
     new Notice(direction === 'right' ? '已复制到右侧泳道。' : '已复制到下方泳道。', 1800);
+  }
+
+  private addEmptySelectedLane(direction: 'right' | 'down'): void {
+    const canvas = this.currentCanvas();
+    if (!canvas || canvas.readonly) return;
+    const [group] = this.selection(canvas).filter((node) => node.type === 'group');
+    if (!group) return;
+    replaceCanvasData(canvas, addEmptyLane(canvas.getData(), group.id, direction, randomId));
+    new Notice(direction === 'right' ? '已新增右侧空泳道。' : '已新增下方空泳道。', 1800);
   }
 
   private moveSelectedLane(direction: 'left' | 'right'): void {

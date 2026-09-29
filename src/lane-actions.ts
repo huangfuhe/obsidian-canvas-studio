@@ -54,6 +54,28 @@ export function duplicateGroupAsLane(
   };
 }
 
+export function addEmptyLane(
+  data: CanvasDocument,
+  groupId: string,
+  direction: LaneDuplicateDirection,
+  idFactory: (prefix: string) => string,
+  gap = 40
+): CanvasDocument {
+  const group = data.nodes.find((node) => node.type === 'group' && node.id === groupId);
+  if (!group) return data;
+  const dx = direction === 'right' ? group.width + gap : 0;
+  const dy = direction === 'down' ? group.height + gap : 0;
+  const siblings = data.nodes.filter((node) => node.type === 'group' && node.label === group.label).length;
+  const lane: CanvasNodeData = {
+    ...group,
+    id: idFactory('group'),
+    x: group.x + dx,
+    y: group.y + dy,
+    label: `${group.label ?? '泳道'} ${siblings + 1}`
+  };
+  return { ...data, nodes: [...data.nodes, lane] };
+}
+
 export function removeGroupContainer(data: CanvasDocument, groupId: string): CanvasDocument {
   const exists = data.nodes.some((node) => node.type === 'group' && node.id === groupId);
   if (!exists) return data;

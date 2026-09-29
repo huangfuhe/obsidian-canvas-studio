@@ -225,6 +225,9 @@ ordering controls in the contextual inspector.
 The 0.9.49 patch adds a persistent mind-map root marker. Layout uses that root
 when no node is selected, while retaining native Canvas nodes and edges.
 
+The 0.9.50 patch adds an empty-swimlane action to the contextual inspector,
+placing a new lane on the right for column layouts or below for row layouts.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual

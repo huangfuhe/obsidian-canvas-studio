@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { arrangeLanes, duplicateGroupAsLane, moveGroupLane, moveNodesIntoGroup, removeGroupContainer, setLaneAxis } from '../src/lane-actions';
+import { addEmptyLane, arrangeLanes, duplicateGroupAsLane, moveGroupLane, moveNodesIntoGroup, removeGroupContainer, setLaneAxis } from '../src/lane-actions';
 import type { CanvasDocument } from '../src/types';
 
 test('duplicates a group as a right-hand lane with internal edges remapped', () => {
@@ -116,4 +116,20 @@ test('moves selected nodes into a target lane while preserving their relative la
   assert.equal(result.nodes[1]?.y, 116);
   assert.equal(result.nodes[2]?.x, 236);
   assert.equal(result.nodes[2]?.y, 196);
+});
+
+test('adds an empty lane beside the source without copying its contents', () => {
+  const data: CanvasDocument = {
+    nodes: [
+      { id: 'lane', type: 'group', x: 0, y: 0, width: 240, height: 160, label: '需求方', styleAttributes: { canvasStudioLaneAxis: 'column' } },
+      { id: 'child', type: 'text', x: 40, y: 50, width: 80, height: 40, text: '保留在原泳道' }
+    ],
+    edges: []
+  };
+  const result = addEmptyLane(data, 'lane', 'right', (prefix) => `${prefix}-2`);
+  assert.equal(result.nodes.length, 3);
+  assert.deepEqual(result.nodes[2], {
+    id: 'group-2', type: 'group', x: 280, y: 0, width: 240, height: 160, label: '需求方 2',
+    styleAttributes: { canvasStudioLaneAxis: 'column' }
+  });
 });
