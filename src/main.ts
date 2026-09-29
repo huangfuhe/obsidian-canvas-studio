@@ -697,6 +697,15 @@ export default class CanvasStudioPlugin extends Plugin {
       button.addEventListener('click', () => this.applyStyle({ textAlign: value }));
     }
 
+    const verticalField = field('垂直对齐');
+    const vertical = verticalField.createEl('select', { attr: { 'aria-label': '垂直对齐' } });
+    for (const [value, label] of [['top', '顶部'], ['middle', '居中'], ['bottom', '底部']] as const) {
+      vertical.createEl('option', { value, text: label });
+    }
+    const currentVertical = nodes[0]?.styleAttributes?.verticalAlign;
+    vertical.value = currentVertical === 'top' || currentVertical === 'bottom' ? currentVertical : 'middle';
+    vertical.addEventListener('change', () => this.applyStyle({ verticalAlign: vertical.value }));
+
     const shapeField = field('形状');
     const shape = shapeField.createEl('select');
     for (const [value, label] of [['', '矩形'], ['pill', '胶囊'], ['diamond', '判断'], ['parallelogram', '输入输出'], ['document', '文档'], ['database', '数据库']] as const) {
@@ -2520,7 +2529,8 @@ export default class CanvasStudioPlugin extends Plugin {
       ['--canvas-studio-line-height', style.lineHeight, ''],
       ['--canvas-studio-text-color', style.textColor, ''],
       ['--canvas-studio-padding', style.padding, 'px'],
-      ['--canvas-studio-opacity', style.opacity, '']
+      ['--canvas-studio-opacity', style.opacity, ''],
+      ['--canvas-studio-vertical-align', style.verticalAlign === 'top' ? 'flex-start' : style.verticalAlign === 'bottom' ? 'flex-end' : style.verticalAlign === 'middle' ? 'center' : undefined, '']
     ];
     for (const [property, value, unit] of properties) {
       if (value === undefined || value === null || value === '') element.style.removeProperty(property);
@@ -2534,6 +2544,7 @@ export default class CanvasStudioPlugin extends Plugin {
     if (scaleX === 1 && scaleY === 1) element.style.removeProperty('scale');
     else element.style.setProperty('scale', `${scaleX} ${scaleY}`);
     element.toggleClass('canvas-studio-underlined', style.textDecoration === 'underline');
+    element.toggleClass('canvas-studio-vertical-align-enabled', style.verticalAlign === 'top' || style.verticalAlign === 'middle' || style.verticalAlign === 'bottom');
   }
 
   private clearTypography(node: RuntimeCanvasNode): void {
@@ -2549,9 +2560,11 @@ export default class CanvasStudioPlugin extends Plugin {
       '--canvas-studio-padding',
       '--canvas-studio-opacity'
     ]) element.style.removeProperty(property);
+    element.style.removeProperty('--canvas-studio-vertical-align');
     element.style.removeProperty('rotate');
     element.style.removeProperty('scale');
     element.removeClass('canvas-studio-underlined');
+    element.removeClass('canvas-studio-vertical-align-enabled');
   }
 }
 

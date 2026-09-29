@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.63 - 2026-09-29
+
+### Added
+
+- 节点属性面板增加顶部/居中/底部垂直对齐，写入可选 `styleAttributes.verticalAlign`。
+
 ## 0.9.62 - 2026-09-29
 
 ### Added

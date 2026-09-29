@@ -268,6 +268,9 @@ edge labels were written to an isolated Canvas.
 The 0.9.62 patch exposes explicit `开始` and `结束` flowchart entries while
 retaining the native pill shape and recording an optional flow role.
 
+The 0.9.63 patch adds top/middle/bottom vertical text alignment in the node
+inspector using optional `styleAttributes.verticalAlign`.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual

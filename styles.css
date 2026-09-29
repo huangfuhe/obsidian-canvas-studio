@@ -330,6 +330,12 @@
   padding: var(--canvas-studio-padding);
 }
 
+.canvas-node.canvas-studio-vertical-align-enabled .canvas-node-content {
+  display: flex;
+  flex-direction: column;
+  justify-content: var(--canvas-studio-vertical-align);
+}
+
 .canvas-node.canvas-studio-underlined .markdown-preview-view,
 .canvas-node.canvas-studio-underlined .markdown-embed-content,
 .canvas-node.canvas-studio-underlined .cm-content {
