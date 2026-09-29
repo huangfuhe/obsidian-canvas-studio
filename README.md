@@ -169,6 +169,9 @@ through Advanced Canvas.
 The 0.9.32 development build adds previous/next presentation navigation and an
 explicit end-presentation command.
 
+The 0.9.33 development build adds native selection duplication with internal
+edge remapping and a `Ctrl/Cmd+D` shortcut.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual

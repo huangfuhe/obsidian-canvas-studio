@@ -24,6 +24,7 @@ import {
 import { arrangeNodes, type ArrangeMode } from './arrange';
 import { alignCanvasEdges, mergeEdgeStyle, mergeNodeStyle, safeInsertionOrigin, updateNodes } from './canvas-data';
 import { connectNodes } from './edge-actions';
+import { duplicateSelection } from './selection-actions';
 import { diagnoseCanvas, type CanvasHealthIssue } from './diagnostics';
 import { moveGroupChildren } from './group-follow';
 import { fitGroupsToChildren } from './group-layout';
@@ -166,6 +167,11 @@ export default class CanvasStudioPlugin extends Plugin {
       id: 'paste-style',
       name: 'Canvas Studio: 粘贴节点格式',
       checkCallback: (checking) => this.commandAvailability(checking, () => this.pasteStyle())
+    });
+    this.addCommand({
+      id: 'duplicate-selection',
+      name: 'Canvas Studio: 复制选中对象',
+      checkCallback: (checking) => this.commandAvailability(checking, () => this.duplicateSelectedNodes())
     });
     this.addCommand({
       id: 'toggle-group-collapse',
@@ -350,6 +356,11 @@ export default class CanvasStudioPlugin extends Plugin {
         this.pasteStyle();
         return;
       }
+    }
+    if (modifier && !event.shiftKey && !event.altKey && event.key.toLocaleLowerCase() === 'd') {
+      event.preventDefault();
+      this.duplicateSelectedNodes();
+      return;
     }
     if (event.ctrlKey || event.metaKey || event.altKey) return;
     const selected = selectedRuntimeNodes(canvas);
@@ -1397,6 +1408,7 @@ export default class CanvasStudioPlugin extends Plugin {
     menu.addSeparator();
     menu.addItem((item) => item.setTitle('组合选中节点').setIcon('group').onClick(() => this.groupSelection()));
     menu.addItem((item) => item.setTitle('取消组合').setIcon('ungroup').onClick(() => this.ungroupSelection()));
+    menu.addItem((item) => item.setTitle('复制选中对象').setIcon('copy').onClick(() => this.duplicateSelectedNodes()));
     menu.addItem((item) => item.setTitle('折叠/展开分组').setIcon('chevrons-down-up').onClick(() => this.toggleSelectedGroupCollapse()));
     menu.showAtPosition(this.menuPosition(anchor));
   }
@@ -1507,6 +1519,20 @@ export default class CanvasStudioPlugin extends Plugin {
     }
     replaceCanvasData(canvas, groupNodes(canvas.getData(), ids, { id: randomId('group'), label: '分组' }));
     new Notice(`已将 ${ids.size} 个节点组合。`, 1800);
+  }
+
+  private duplicateSelectedNodes(): void {
+    const canvas = this.currentCanvas();
+    if (!canvas || canvas.readonly) return;
+    const ids = new Set(this.selection(canvas).map((node) => node.id));
+    if (ids.size === 0) {
+      new Notice('请先选择要复制的对象。', 2200);
+      return;
+    }
+    const data = canvas.getData();
+    const nextData = duplicateSelection(data, ids, randomId);
+    replaceCanvasData(canvas, nextData);
+    new Notice(`已复制 ${ids.size} 个对象。`, 1600);
   }
 
   private ungroupSelection(): void {
