@@ -127,6 +127,9 @@ The 0.9.18 patch labels the export menu with the PNG/SVG formats exposed by
 Advanced Canvas; PDF export is not claimed until a dedicated implementation is
 available.
 
+The 0.9.19 development build adds native Canvas link-node insertion for web,
+Obsidian, and mailto URLs.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual

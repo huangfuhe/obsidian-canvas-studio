@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.19 - 2026-09-29
+
+### Added
+
+- 新增“插入链接节点”工具和命令面板命令。
+- 支持 http/https、obsidian、mailto 等 URL，并写入原生 Canvas `link` 节点。
+
 ## 0.9.18 - 2026-09-29
 
 ### Changed

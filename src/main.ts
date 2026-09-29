@@ -40,6 +40,7 @@ import { applyCanvasTheme, CANVAS_THEMES } from './themes';
 import { COMPONENT_LIBRARY, componentsByCategory, type ComponentSpec } from './components';
 import { createSavedComponent, instantiateSavedComponent, type SavedCanvasComponent } from './saved-components';
 import { filterMediaItems, mediaItemsFromPaths, type MediaKind, type MediaItem } from './media';
+import { createLinkNode, normalizeLinkUrl } from './links';
 import { clientPointToCanvas, parseCssTransform } from './canvas-position';
 import { addWaypointAtLongestSegment, edgeRoutePoints, EDGE_WAYPOINTS_KEY, parseEdgeWaypoints, polylinePath, routeEdgeWithObstacles, serializeEdgeWaypoints, type EdgeWaypoint } from './edge-waypoints';
 import type { CanvasDocument, CanvasEdgeData, CanvasNodeData, CanvasStyleAttributes, LayoutDirection } from './types';
@@ -76,6 +77,7 @@ const TOOLBAR_ACTIONS = [
   { id: 'template', icon: 'layout-template', label: '流程图与泳道模板', shortLabel: '模板' },
   { id: 'components', icon: 'blocks', label: '常用组件库', shortLabel: '组件' },
   { id: 'media', icon: 'image-plus', label: '插入媒体或文件', shortLabel: '媒体' },
+  { id: 'link', icon: 'link-2', label: '插入链接节点', shortLabel: '链接' },
   { id: 'arrange', icon: 'align-horizontal-distribute-center', label: '节点对齐与分布', shortLabel: '排版' },
   { id: 'shape', icon: 'shapes', label: '设置流程图形状', shortLabel: '形状' },
   { id: 'edge', icon: 'git-commit-horizontal', label: '连线样式与自动整理', shortLabel: '连线' },
@@ -149,6 +151,11 @@ export default class CanvasStudioPlugin extends Plugin {
       id: 'toggle-group-collapse',
       name: 'Canvas Studio: 折叠/展开分组',
       checkCallback: (checking) => this.commandAvailability(checking, () => this.toggleSelectedGroupCollapse())
+    });
+    this.addCommand({
+      id: 'insert-link-node',
+      name: 'Canvas Studio: 插入链接节点',
+      checkCallback: (checking) => this.commandAvailability(checking, () => this.openLinkInsert())
     });
     this.addCommand({
       id: 'import-markdown-outline',
@@ -404,6 +411,7 @@ export default class CanvasStudioPlugin extends Plugin {
       case 'template': this.openTemplateMenu(anchor); break;
       case 'components': this.openComponentLibrary(); break;
       case 'media': this.openMediaLibrary(); break;
+      case 'link': this.openLinkInsert(); break;
       case 'arrange': this.openArrangeMenu(anchor); break;
       case 'shape': this.openShapeMenu(anchor); break;
       case 'edge': this.openEdgeMenu(anchor); break;
@@ -1071,6 +1079,24 @@ export default class CanvasStudioPlugin extends Plugin {
 
   private openMediaLibrary(): void {
     new MediaLibraryModal(this.app, (item) => this.insertMediaItem(item)).open();
+  }
+
+  private openLinkInsert(): void {
+    new LinkInsertModal(this.app, (url, label) => this.insertLinkNode(url, label)).open();
+  }
+
+  private insertLinkNode(url: string, label?: string): void {
+    const canvas = this.currentCanvas();
+    if (!canvas || canvas.readonly) return;
+    const normalized = normalizeLinkUrl(url);
+    if (!normalized) {
+      new Notice('请输入有效链接。', 2500);
+      return;
+    }
+    const data = canvas.getData();
+    const node = createLinkNode(randomId('link'), normalized, safeInsertionOrigin(data, true), label);
+    replaceCanvasData(canvas, { ...data, nodes: [...data.nodes, node] });
+    new Notice(`已插入链接：${label?.trim() || normalized}`, 1800);
   }
 
   private insertMediaItem(item: MediaItem): void {
@@ -2002,6 +2028,50 @@ class MediaLibraryModal extends Modal {
     const icon = container.createDiv({ cls: 'canvas-studio-media-icon' });
     setIcon(icon, MEDIA_KIND_ICONS[item.kind]);
     icon.setAttribute('aria-hidden', 'true');
+  }
+}
+
+class LinkInsertModal extends Modal {
+  constructor(
+    app: CanvasStudioPlugin['app'],
+    private readonly submit: (url: string, label: string) => void
+  ) {
+    super(app);
+  }
+
+  override onOpen(): void {
+    this.titleEl.setText('插入链接节点');
+    const urlField = this.contentEl.createEl('label', { text: '链接地址' });
+    const url = urlField.createEl('input', {
+      type: 'url',
+      attr: { placeholder: 'https://example.com', 'aria-label': '链接地址' }
+    });
+    const labelField = this.contentEl.createEl('label', { text: '显示标题（可选）' });
+    const label = labelField.createEl('input', {
+      type: 'text',
+      attr: { placeholder: '例如：项目文档', 'aria-label': '链接显示标题' }
+    });
+    const actions = this.contentEl.createDiv({ cls: 'canvas-studio-modal-actions' });
+    const cancel = actions.createEl('button', { text: '取消' });
+    const insert = actions.createEl('button', { text: '插入', cls: 'mod-cta' });
+    const commit = () => {
+      const normalized = normalizeLinkUrl(url.value);
+      if (!normalized) {
+        new Notice('请输入有效链接。', 2500);
+        return;
+      }
+      this.submit(normalized, label.value);
+      this.close();
+    };
+    cancel.addEventListener('click', () => this.close());
+    insert.addEventListener('click', commit);
+    url.addEventListener('keydown', (event) => { if (event.key === 'Enter') commit(); });
+    label.addEventListener('keydown', (event) => { if (event.key === 'Enter') commit(); });
+    window.setTimeout(() => url.focus(), 0);
+  }
+
+  override onClose(): void {
+    this.contentEl.empty();
   }
 }
 
