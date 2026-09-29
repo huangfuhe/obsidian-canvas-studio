@@ -436,6 +436,10 @@ export default class CanvasStudioPlugin extends Plugin {
     const data = node.getData();
     const groups = canvas.getData().nodes.filter((candidate) => candidate.type === 'group');
     const groupSnapped = snapNodeIntoGroup(data, groups, { threshold: this.settings.snapThreshold });
+    this.syncLaneTargetHighlight(canvas, groupSnapped.groupId);
+    const laneMembership = groupSnapped.groupId ?? null;
+    const currentLaneMembership = data.styleAttributes?.canvasStudioLaneId;
+    const membershipChanged = laneMembership !== currentLaneMembership;
     const others = canvas.getData().nodes.filter((candidate) => candidate.id !== node.id);
     const snapped = this.settings.smartSnap
       ? snapNodePosition(groupSnapped.node, others, {
@@ -443,12 +447,27 @@ export default class CanvasStudioPlugin extends Plugin {
         threshold: this.settings.snapThreshold
       })
       : { x: groupSnapped.node.x, y: groupSnapped.node.y };
-    if (snapped.x === data.x && snapped.y === data.y) return;
+    if (snapped.x === data.x && snapped.y === data.y && !membershipChanged) return;
     this.snappingNodeIds.add(node.id);
-    node.setData({ ...data, x: snapped.x, y: snapped.y });
+    const nextStyleAttributes = { ...(data.styleAttributes ?? {}) };
+    if (laneMembership) nextStyleAttributes.canvasStudioLaneId = laneMembership;
+    else delete nextStyleAttributes.canvasStudioLaneId;
+    node.setData({
+      ...data,
+      x: snapped.x,
+      y: snapped.y,
+      ...(Object.keys(nextStyleAttributes).length > 0 ? { styleAttributes: nextStyleAttributes } : { styleAttributes: undefined })
+    });
     canvas.requestSave?.();
     this.showSnapGuides(canvas, snapped.guideX, snapped.guideY);
     window.setTimeout(() => this.snappingNodeIds.delete(node.id), 0);
+  }
+
+  private syncLaneTargetHighlight(canvas: RuntimeCanvas, groupId?: string): void {
+    for (const runtimeNode of canvas.nodes.values()) {
+      if (runtimeNode.getData().type !== 'group' || !runtimeNode.nodeEl) continue;
+      runtimeNode.nodeEl.toggleClass('canvas-studio-lane-target', runtimeNode.id === groupId);
+    }
   }
 
   private showSnapGuides(canvas: RuntimeCanvas, x?: number, y?: number): void {

@@ -237,6 +237,9 @@ moved into or copied with a swimlane.
 The 0.9.53 patch adds a direct swimlane-membership selector for selected nodes,
 so reassignment does not require selecting the target group at the same time.
 
+The 0.9.54 patch adds a live target highlight during node movement and keeps
+the persisted lane membership in sync when a node enters or leaves a lane.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual

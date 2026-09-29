@@ -52,6 +52,12 @@
   outline-offset: -4px;
 }
 
+.canvas-node.canvas-studio-lane-target {
+  outline: 3px solid var(--interactive-accent);
+  outline-offset: 6px;
+  box-shadow: 0 0 0 6px color-mix(in srgb, var(--interactive-accent) 22%, transparent);
+}
+
 .canvas-wrapper.canvas-studio-grid-enabled::before {
   position: absolute;
   inset: 0;
