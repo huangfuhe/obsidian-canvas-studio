@@ -231,6 +231,9 @@ placing a new lane on the right for column layouts or below for row layouts.
 The 0.9.51 patch adds an explicit confirmed delete action for a swimlane and
 its contained nodes/edges, while keeping container removal content-preserving.
 
+The 0.9.52 patch records optional `canvasStudioLaneId` membership on nodes
+moved into or copied with a swimlane.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual

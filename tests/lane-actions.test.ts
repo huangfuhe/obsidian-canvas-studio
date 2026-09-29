@@ -114,6 +114,7 @@ test('moves selected nodes into a target lane while preserving their relative la
   const result = moveNodesIntoGroup(data, 'lane', new Set(['a', 'b']));
   assert.equal(result.nodes[1]?.x, 116);
   assert.equal(result.nodes[1]?.y, 116);
+  assert.equal(result.nodes[1]?.styleAttributes?.canvasStudioLaneId, 'lane');
   assert.equal(result.nodes[2]?.x, 236);
   assert.equal(result.nodes[2]?.y, 196);
 });

@@ -37,7 +37,11 @@ export function duplicateGroupAsLane(
     ...child,
     id: idMap.get(child.id)!,
     x: child.x + dx,
-    y: child.y + dy
+    y: child.y + dy,
+    styleAttributes: {
+      ...(child.styleAttributes ?? {}),
+      canvasStudioLaneId: idMap.get(group.id)!
+    }
   }));
   const duplicateEdges = data.edges
     .filter((edge) => childIds.has(edge.fromNode) && childIds.has(edge.toNode))
@@ -115,7 +119,12 @@ export function moveNodesIntoGroup(
   return {
     ...data,
     nodes: data.nodes.map((node) => nodeIds.has(node.id) && node.type !== 'group'
-      ? { ...node, x: node.x + dx, y: node.y + dy }
+      ? {
+        ...node,
+        x: node.x + dx,
+        y: node.y + dy,
+        styleAttributes: { ...(node.styleAttributes ?? {}), canvasStudioLaneId: group.id }
+      }
       : node)
   };
 }

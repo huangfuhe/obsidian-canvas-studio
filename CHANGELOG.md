@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.52 - 2026-09-29
+
+### Added
+
+- 泳道节点移入和复制现在写入可选 `styleAttributes.canvasStudioLaneId`，支持回读节点归属。
+
 ## 0.9.51 - 2026-09-29
 
 ### Added
