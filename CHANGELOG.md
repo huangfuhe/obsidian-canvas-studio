@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.59 - 2026-09-29
+
+### Docs
+
+- 记录运行中 Obsidian CLI 未提供 PDF/print/export 命令，PDF 继续保持为后续独立能力；PNG/SVG 仍由 Advanced Canvas 提供。
+
 ## 0.9.58 - 2026-09-29
 
 ### Fixed

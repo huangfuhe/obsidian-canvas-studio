@@ -253,6 +253,10 @@ node types.
 The 0.9.58 patch aligns the development status documents with the current
 0.9.x implementation and verification scope.
 
+The 0.9.59 documentation check records that the running Obsidian CLI exposes no
+PDF/print/export command; Canvas Studio therefore continues to claim PNG/SVG
+only until a dedicated PDF implementation exists.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual
