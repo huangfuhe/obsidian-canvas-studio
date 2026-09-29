@@ -261,6 +261,10 @@ The 0.9.60 documentation check records a real Obsidian CLI Canvas smoke gate:
 the row-oriented swimlane command wrote native `group`/`text`/`edge` data to an
 isolated Canvas and the temporary file was then removed.
 
+The 0.9.61 documentation check also verified the decision-branch template at
+runtime: six native text nodes, six edges, five flowchart shapes, and `是`/`否`
+edge labels were written to an isolated Canvas.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual
