@@ -503,6 +503,24 @@ export default class CanvasStudioPlugin extends Plugin {
     shape.value = typeof nodes[0]?.styleAttributes?.shape === 'string' ? nodes[0].styleAttributes.shape : '';
     shape.addEventListener('change', () => this.applyShape(shape.value || null));
 
+    const links = nodes.filter((node) => node.type === 'link');
+    if (links.length === 1) {
+      const linkField = field('链接地址');
+      const linkUrl = linkField.createEl('input', {
+        type: 'url',
+        value: links[0]?.url ?? '',
+        attr: { 'aria-label': '链接地址' }
+      });
+      linkUrl.addEventListener('change', () => this.applyLinkProperties(linkUrl.value, undefined));
+      const linkTitle = field('链接标题');
+      const title = linkTitle.createEl('input', {
+        type: 'text',
+        value: links[0]?.text ?? '',
+        attr: { placeholder: '链接显示标题', 'aria-label': '链接标题' }
+      });
+      title.addEventListener('change', () => this.applyLinkProperties(undefined, title.value));
+    }
+
     const groups = nodes.filter((node) => node.type === 'group');
     if (groups.length > 0) {
       const titleField = field('分组标题');
@@ -1292,6 +1310,23 @@ export default class CanvasStudioPlugin extends Plugin {
     const groupIds = new Set(this.selection(canvas).filter((node) => node.type === 'group').map((node) => node.id));
     if (groupIds.size === 0) return;
     replaceCanvasData(canvas, updateGroupProperties(canvas.getData(), groupIds, { label: label.trim() || undefined }));
+  }
+
+  private applyLinkProperties(url?: string, title?: string): void {
+    const canvas = this.currentCanvas();
+    if (!canvas || canvas.readonly) return;
+    const [link] = this.selection(canvas).filter((node) => node.type === 'link');
+    if (!link) return;
+    const nextUrl = url === undefined ? link.url : normalizeLinkUrl(url);
+    if (url !== undefined && !nextUrl) {
+      new Notice('请输入有效链接。', 2500);
+      return;
+    }
+    replaceCanvasData(canvas, updateNodes(canvas.getData(), new Set([link.id]), (node) => ({
+      ...node,
+      ...(nextUrl ? { url: nextUrl } : {}),
+      ...(title === undefined ? {} : { text: title.trim() || nextUrl || node.text })
+    })));
   }
 
   private resizeSelectedGroups(width: number, height: number): void {

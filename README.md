@@ -130,6 +130,9 @@ available.
 The 0.9.19 development build adds native Canvas link-node insertion for web,
 Obsidian, and mailto URLs.
 
+The 0.9.20 development build adds contextual editing for a link node's address
+and display title.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual
