@@ -257,6 +257,10 @@ The 0.9.59 documentation check records that the running Obsidian CLI exposes no
 PDF/print/export command; Canvas Studio therefore continues to claim PNG/SVG
 only until a dedicated PDF implementation exists.
 
+The 0.9.60 documentation check records a real Obsidian CLI Canvas smoke gate:
+the row-oriented swimlane command wrote native `group`/`text`/`edge` data to an
+isolated Canvas and the temporary file was then removed.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual

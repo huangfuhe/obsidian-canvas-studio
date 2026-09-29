@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.60 - 2026-09-29
+
+### Docs
+
+- 开发方案补充真实 Obsidian CLI Canvas smoke gate：行式泳道命令写入原生 group/text/edge 后读取成功，临时测试文件已清理。
+
 ## 0.9.59 - 2026-09-29
 
 ### Docs
