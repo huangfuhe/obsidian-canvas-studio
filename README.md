@@ -206,6 +206,10 @@ The 0.9.43 patch improves two editing paths:
 - selected text ranges can be recovered from CodeMirror or the native DOM
   selection before applying font styles from the toolbar.
 
+The 0.9.44 patch also shows the same temporary obstacle-avoiding preview for
+edges explicitly set to the `自动避障` route, even before a manual waypoint is
+added.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual

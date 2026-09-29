@@ -971,9 +971,11 @@ export default class CanvasStudioPlugin extends Plugin {
     const selectedEdges = selectedRuntimeEdges(target);
     const edgeData = runtimeEdge?.getData() as CanvasEdgeData | undefined;
     const waypoints = edgeData ? (this.edgeWaypointTransient.get(edgeData.id) ?? parseEdgeWaypoints(edgeData)) : [];
+    const routeMethod = edgeData?.styleAttributes?.pathfindingMethod;
+    const shouldPreviewRoute = waypoints.length > 0 || routeMethod === 'a-star';
     const display = runtimeEdge?.path?.display;
     const svg = display?.ownerSVGElement;
-    if (selectedEdges.length !== 1 || !runtimeEdge || !edgeData || waypoints.length === 0 || !svg || !display || target.readonly) {
+    if (selectedEdges.length !== 1 || !runtimeEdge || !edgeData || !shouldPreviewRoute || !svg || !display || target.readonly) {
       this.clearEdgeWaypointOverlay();
       return;
     }
