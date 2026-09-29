@@ -116,6 +116,7 @@ const READONLY_TOOLBAR_ACTIONS = new Set<ToolbarActionId | 'more'>([
   'search', 'grid', 'clear-draw', 'export', 'present', 'previous-node', 'next-node', 'end-presentation', 'info', 'diagnostics', 'zoom-selection', 'zoom-fit', 'more'
 ]);
 const COMPONENT_MIME = 'application/x-canvas-studio-component';
+const COMPONENT_DRAG_STORAGE_KEY = 'canvas-studio-active-component-drag';
 
 export default class CanvasStudioPlugin extends Plugin {
   override settings: CanvasStudioSettings = DEFAULT_SETTINGS;
@@ -303,6 +304,7 @@ export default class CanvasStudioPlugin extends Plugin {
     this.registerDomEvent(document, 'drop', (event) => this.handleComponentDrop(event));
     this.registerDomEvent(document, 'dragend', () => {
       this.activeComponentDragId = null;
+      this.clearStoredComponentDrag();
       this.clearComponentDropPreview();
     });
     this.registerDomEvent(document, 'pointermove', (event) => this.handleEdgeWaypointPointerMove(event));
@@ -1088,7 +1090,7 @@ export default class CanvasStudioPlugin extends Plugin {
   private handleComponentDragOver(event: DragEvent): void {
     const canvas = this.canvasAtEventTarget(event.target) ?? this.componentDropCanvas;
     if (!canvas || canvas.readonly || !event.dataTransfer?.types.includes(COMPONENT_MIME)) return;
-    const componentId = event.dataTransfer.getData(COMPONENT_MIME) || this.activeComponentDragId;
+    const componentId = event.dataTransfer.getData(COMPONENT_MIME) || this.activeComponentDragId || this.storedComponentDragId();
     const component = this.availableComponents().find((candidate) => candidate.id === componentId);
     if (!component) return;
     event.preventDefault();
@@ -1102,7 +1104,7 @@ export default class CanvasStudioPlugin extends Plugin {
   private handleComponentDrop(event: DragEvent): void {
     const canvas = this.canvasAtEventTarget(event.target) ?? this.componentDropCanvas;
     if (!canvas || canvas.readonly || !event.dataTransfer?.types.includes(COMPONENT_MIME)) return;
-    const componentId = event.dataTransfer.getData(COMPONENT_MIME) || this.activeComponentDragId;
+    const componentId = event.dataTransfer.getData(COMPONENT_MIME) || this.activeComponentDragId || this.storedComponentDragId();
     const component = this.availableComponents().find((candidate) => candidate.id === componentId);
     if (!component) return;
     event.preventDefault();
@@ -1144,6 +1146,27 @@ export default class CanvasStudioPlugin extends Plugin {
 
   private beginComponentDrag(componentId: string): void {
     this.activeComponentDragId = componentId;
+    try {
+      window.localStorage.setItem(COMPONENT_DRAG_STORAGE_KEY, componentId);
+    } catch {
+      // Private browsing or restricted storage can still use DataTransfer.
+    }
+  }
+
+  private storedComponentDragId(): string | null {
+    try {
+      return window.localStorage.getItem(COMPONENT_DRAG_STORAGE_KEY);
+    } catch {
+      return null;
+    }
+  }
+
+  private clearStoredComponentDrag(): void {
+    try {
+      window.localStorage.removeItem(COMPONENT_DRAG_STORAGE_KEY);
+    } catch {
+      // Ignore restricted storage cleanup failures.
+    }
   }
 
   private componentDropPoint(canvas: RuntimeCanvas, clientX: number, clientY: number): { x: number; y: number } {

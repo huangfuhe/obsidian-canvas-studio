@@ -193,6 +193,9 @@ empty-selection inspector.
 The 0.9.40 development build adds a basic local freehand layer stored in Canvas
 Studio metadata, with an explicit clear-strokes action.
 
+The 0.9.41 patch adds a localStorage fallback for component identity during
+cross-window drag operations.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual
