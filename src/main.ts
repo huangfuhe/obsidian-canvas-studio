@@ -37,6 +37,7 @@ import { computeMindMapLayout, moveNodesToLayout } from './layout';
 import { outlineToCanvas, parseMarkdownOutline } from './outline';
 import { findCanvasMatches, replaceAllMatches, replaceCurrentMatch, type CanvasSearchMatch } from './search';
 import { markdownTextSelection, styleTextSelection, type TextSelectionSnapshot } from './rich-text';
+import { mindMapRootId, setMindMapRoot as setCanvasMindMapRoot } from './mindmap';
 import { snapNodePosition } from './snap';
 import { instantiateSwimlane, SWIMLANE_TEMPLATES } from './swimlane';
 import { FLOW_TEMPLATES, instantiateFlowTemplate } from './templates';
@@ -183,6 +184,11 @@ export default class CanvasStudioPlugin extends Plugin {
       id: 'layout-mindmap',
       name: 'Canvas Studio: 自动布局思维导图',
       checkCallback: (checking) => this.commandAvailability(checking, () => this.layoutMindMap())
+    });
+    this.addCommand({
+      id: 'set-mindmap-root',
+      name: 'Canvas Studio: 设为思维导图根节点',
+      checkCallback: (checking) => this.commandAvailability(checking, () => this.setMindMapRoot())
     });
     this.addCommand({
       id: 'copy-style',
@@ -653,6 +659,17 @@ export default class CanvasStudioPlugin extends Plugin {
     }
     shape.value = typeof nodes[0]?.styleAttributes?.shape === 'string' ? nodes[0].styleAttributes.shape : '';
     shape.addEventListener('change', () => this.applyShape(shape.value || null));
+
+    const activeCanvas = this.currentCanvas();
+    if (nodes.length === 1 && activeCanvas) {
+      const mindMapField = field('思维导图');
+      const rootId = mindMapRootId(activeCanvas.getData());
+      const rootAction = mindMapField.createEl('button', {
+        text: rootId === nodes[0]?.id ? '取消思维导图根节点' : '设为思维导图根节点',
+        cls: 'canvas-studio-inspector-action'
+      });
+      rootAction.addEventListener('click', () => this.setMindMapRoot());
+    }
 
     const links = nodes.filter((node) => node.type === 'link');
     if (links.length === 1) {
@@ -1354,6 +1371,20 @@ export default class CanvasStudioPlugin extends Plugin {
     new Notice('已创建同级节点。', 1500);
   }
 
+  private setMindMapRoot(): void {
+    const canvas = this.currentCanvas();
+    if (!canvas || canvas.readonly) return;
+    const [node] = this.selection(canvas);
+    if (!node) {
+      new Notice('请选择一个节点作为思维导图根节点。', 2500);
+      return;
+    }
+    const currentRoot = mindMapRootId(canvas.getData());
+    const nextRoot = currentRoot === node.id ? null : node.id;
+    replaceCanvasData(canvas, setCanvasMindMapRoot(canvas.getData(), nextRoot));
+    new Notice(nextRoot ? '已设为思维导图根节点。' : '已取消思维导图根节点。', 1800);
+  }
+
   private nextChildCrossPosition(canvas: RuntimeCanvas, parent: CanvasNodeData): number {
     const data = canvas.getData();
     const childIds = new Set(data.edges
@@ -1380,7 +1411,7 @@ export default class CanvasStudioPlugin extends Plugin {
     const [selected] = this.selection(canvas);
     const data = canvas.getData();
     const result = computeMindMapLayout(data, {
-      rootId: selected?.id,
+      rootId: selected?.id ?? mindMapRootId(data) ?? undefined,
       direction: this.settings.layoutDirection
     });
     const sides = (() => {

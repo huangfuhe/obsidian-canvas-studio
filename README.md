@@ -222,6 +222,9 @@ moved into the selected swimlane while keeping their relative arrangement.
 The 0.9.48 patch adds node rotation, horizontal/vertical flipping, and layer
 ordering controls in the contextual inspector.
 
+The 0.9.49 patch adds a persistent mind-map root marker. Layout uses that root
+when no node is selected, while retaining native Canvas nodes and edges.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual
