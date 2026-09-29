@@ -1567,8 +1567,10 @@ export default class CanvasStudioPlugin extends Plugin {
     const canvas = this.currentCanvas();
     if (!canvas) return;
     const menu = new Menu();
-    const shapes: Array<[string, string | null, string]> = [
+    const shapes: Array<[string, string | null, string, string?]> = [
       ['矩形', null, 'rectangle-horizontal'],
+      ['开始', 'pill', 'play-circle', 'start'],
+      ['结束', 'pill', 'circle-stop', 'end'],
       ['圆角胶囊', 'pill', 'shape-pill'],
       ['判断', 'diamond', 'diamond'],
       ['输入/输出', 'parallelogram', 'shape-parallelogram'],
@@ -1577,8 +1579,8 @@ export default class CanvasStudioPlugin extends Plugin {
       ['文档', 'document', 'shape-document'],
       ['数据库', 'database', 'shape-database']
     ];
-    for (const [label, value, icon] of shapes) {
-      menu.addItem((item) => item.setTitle(label).setIcon(icon).onClick(() => this.applyShape(value)));
+    for (const [label, value, icon, role] of shapes) {
+      menu.addItem((item) => item.setTitle(label).setIcon(icon).onClick(() => this.applyShape(value, role)));
     }
     menu.showAtPosition(this.menuPosition(anchor));
   }
@@ -2384,7 +2386,7 @@ export default class CanvasStudioPlugin extends Plugin {
     });
   }
 
-  private applyShape(shape: string | null): void {
+  private applyShape(shape: string | null, flowRole?: string): void {
     const canvas = this.currentCanvas();
     if (!canvas) return;
     if (canvas.readonly) return;
@@ -2398,7 +2400,10 @@ export default class CanvasStudioPlugin extends Plugin {
         this.settings.defaultFontFamily,
         this.settings.defaultFontSize
       );
-      replaceCanvasData(canvas, { ...canvas.getData(), nodes: [...canvas.getData().nodes, node] });
+      const nextNode = flowRole
+        ? { ...node, styleAttributes: { ...(node.styleAttributes ?? {}), canvasStudioFlowRole: flowRole } }
+        : node;
+      replaceCanvasData(canvas, { ...canvas.getData(), nodes: [...canvas.getData().nodes, nextNode] });
       window.setTimeout(() => {
         this.focusNode(canvas, node.id);
         canvas.nodes.get(node.id)?.startEditing?.();
@@ -2409,6 +2414,7 @@ export default class CanvasStudioPlugin extends Plugin {
     const nextData = updateNodes(canvas.getData(), ids, (node) => {
       const styled = mergeNodeStyle(node, {
         shape,
+        canvasStudioFlowRole: flowRole ?? null,
         ...(shape === 'diamond' ? { padding: 32 } : {})
       });
       if (shape === 'diamond') return { ...styled, width: Math.max(styled.width, 340), height: Math.max(styled.height, 180) };
