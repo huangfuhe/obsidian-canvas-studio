@@ -160,6 +160,9 @@ inspector.
 The 0.9.29 development build extends Canvas search and replace to group and
 swimlane titles.
 
+The 0.9.30 development build extends search and replace to link-node URLs while
+preserving their display titles.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual

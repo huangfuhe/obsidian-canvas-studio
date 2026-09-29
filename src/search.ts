@@ -4,7 +4,7 @@ export interface CanvasSearchMatch {
   nodeId: string;
   text: string;
   index: number;
-  field?: 'label';
+  field?: 'label' | 'url';
 }
 
 function normalized(value: string, caseSensitive: boolean): string {
@@ -20,9 +20,10 @@ export function findCanvasMatches(
   const needle = normalized(query, caseSensitive);
   const matches: CanvasSearchMatch[] = [];
   for (const node of data.nodes) {
-    const fields: Array<{ value: string; field?: 'label' }> = [];
+    const fields: Array<{ value: string; field?: 'label' | 'url' }> = [];
     if (typeof node.text === 'string') fields.push({ value: node.text });
     if (typeof node.label === 'string') fields.push({ value: node.label, field: 'label' });
+    if (node.type === 'link' && typeof node.url === 'string') fields.push({ value: node.url, field: 'url' });
     for (const field of fields) {
       const haystack = normalized(field.value, caseSensitive);
       let fromIndex = 0;
@@ -47,12 +48,14 @@ export function replaceCurrentMatch(
   return {
     ...data,
     nodes: data.nodes.map((node) => {
-      const source = match.field === 'label' ? node.label : node.text;
+      const source = match.field === 'label' ? node.label : match.field === 'url' ? node.url : node.text;
       if (node.id !== match.nodeId || typeof source !== 'string') return node;
       const before = source.slice(0, match.index);
       const after = source.slice(match.index + query.length);
       const value = `${before}${replacement}${after}`;
-      return match.field === 'label' ? { ...node, label: value } : { ...node, text: value };
+      if (match.field === 'label') return { ...node, label: value };
+      if (match.field === 'url') return { ...node, url: value };
+      return { ...node, text: value };
     })
   };
 }
@@ -86,7 +89,8 @@ export function replaceAllMatches(
     };
     const text = typeof node.text === 'string' ? replaceValue(node.text) : node.text;
     const label = typeof node.label === 'string' ? replaceValue(node.label) : node.label;
-    return text === node.text && label === node.label ? node : { ...node, text, label };
+    const url = node.type === 'link' && typeof node.url === 'string' ? replaceValue(node.url) : node.url;
+    return text === node.text && label === node.label && url === node.url ? node : { ...node, text, label, url };
   });
   return { data: { ...data, nodes }, replacements };
 }

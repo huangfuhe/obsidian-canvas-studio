@@ -8,7 +8,8 @@ const data: CanvasDocument = {
     { id: 'a', type: 'text', x: 0, y: 0, width: 100, height: 50, text: 'Canvas canvas' },
     { id: 'b', type: 'text', x: 0, y: 0, width: 100, height: 50, text: '格式和 Canvas' },
     { id: 'c', type: 'file', x: 0, y: 0, width: 100, height: 50, file: 'note.md' },
-    { id: 'g', type: 'group', x: 0, y: 0, width: 100, height: 50, label: 'Canvas 泳道' }
+    { id: 'g', type: 'group', x: 0, y: 0, width: 100, height: 50, label: 'Canvas 泳道' },
+    { id: 'link', type: 'link', x: 0, y: 0, width: 100, height: 50, url: 'https://example.com/docs', text: '文档' }
   ],
   edges: []
 };
@@ -45,4 +46,12 @@ test('searches and replaces group labels without changing node text', () => {
   const result = replaceCurrentMatch(data, matches[0]!, '泳道', '需求方');
   assert.equal(result.nodes[3]?.label, 'Canvas 需求方');
   assert.equal(result.nodes[3]?.text, undefined);
+});
+
+test('searches and replaces link URLs without changing link titles', () => {
+  const matches = findCanvasMatches(data, 'example.com');
+  assert.deepEqual(matches[0], { nodeId: 'link', text: 'https://example.com/docs', index: 8, field: 'url' });
+  const result = replaceCurrentMatch(data, matches[0]!, 'example.com', 'mi.example.com');
+  assert.equal(result.nodes[4]?.url, 'https://mi.example.com/docs');
+  assert.equal(result.nodes[4]?.text, '文档');
 });
