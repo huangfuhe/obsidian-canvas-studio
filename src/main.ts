@@ -967,7 +967,7 @@ export default class CanvasStudioPlugin extends Plugin {
     const arrow = arrowField.createEl('select');
     for (const [value, label] of [['arrow', '三角箭头'], ['none', '无箭头'], ['diamond', '菱形'], ['circle', '圆形']] as const) arrow.createEl('option', { value, text: label });
     arrow.value = typeof edges[0]?.styleAttributes?.arrow === 'string' ? edges[0].styleAttributes.arrow : 'arrow';
-    arrow.addEventListener('change', () => this.applyEdgeStyle({ ...(arrow.value === 'arrow' || arrow.value === 'none' ? { toEnd: arrow.value } : { arrow: arrow.value }) }));
+    arrow.addEventListener('change', () => this.applyEdgeStyle({ ...(arrow.value === 'arrow' || arrow.value === 'none' ? { toEnd: arrow.value, arrow: null } : { arrow: arrow.value, toEnd: null }) }));
 
     const labelField = container.createDiv({ cls: 'canvas-studio-inspector-field' });
     labelField.createEl('label', { text: '连线标签' });
@@ -2095,7 +2095,7 @@ export default class CanvasStudioPlugin extends Plugin {
       ['实线', { path: null }, 'minus'],
       ['虚线', { path: 'long-dashed' }, 'ellipsis'],
       ['点线', { path: 'dotted' }, 'more-horizontal'],
-      ['三角箭头', { arrow: null }, 'move-right'],
+      ['三角箭头', { toEnd: 'arrow', arrow: null }, 'move-right'],
       ['菱形箭头', { arrow: 'diamond' }, 'diamond'],
       ['圆形箭头', { arrow: 'circle' }, 'circle']
     ];

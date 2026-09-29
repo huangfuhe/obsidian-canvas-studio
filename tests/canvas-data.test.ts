@@ -41,6 +41,13 @@ test('writes edge arrow endpoints at the native edge level', () => {
   assert.deepEqual(result.styleAttributes, { path: 'solid' });
 });
 
+test('clears custom arrow styling when switching back to native endpoint arrows', () => {
+  const edge = { id: 'e', fromNode: 'a', toNode: 'b', styleAttributes: { arrow: 'diamond', path: 'solid' } };
+  const result = mergeEdgePresentation(edge, { toEnd: 'arrow', arrow: null });
+  assert.equal(result.toEnd, 'arrow');
+  assert.deepEqual(result.styleAttributes, { path: 'solid' });
+});
+
 test('places imported structures outside the current canvas bounds', () => {
   const data = parseCanvasDocument(JSON.stringify({
     nodes: [

@@ -280,6 +280,9 @@ basic-process and decision-branch templates.
 The 0.9.66 patch adds flow-role readback and editing for pill-shaped nodes in
 the contextual inspector.
 
+The 0.9.67 patch clears stale custom arrow styling when switching an edge back
+to native triangle or no-arrow endpoints.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual
