@@ -23,6 +23,7 @@ import {
 } from './canvas-compat';
 import { arrangeNodes, type ArrangeMode } from './arrange';
 import { alignCanvasEdges, mergeEdgeStyle, mergeNodeStyle, safeInsertionOrigin, updateNodes } from './canvas-data';
+import { connectNodes } from './edge-actions';
 import { diagnoseCanvas, type CanvasHealthIssue } from './diagnostics';
 import { moveGroupChildren } from './group-follow';
 import { fitGroupsToChildren } from './group-layout';
@@ -1460,6 +1461,10 @@ export default class CanvasStudioPlugin extends Plugin {
     if (!canvas) return;
     const menu = new Menu();
     menu.addItem((item) => item
+      .setTitle('连接两个选中节点')
+      .setIcon('arrow-right-left')
+      .onClick(() => this.connectSelectedNodes()));
+    menu.addItem((item) => item
       .setTitle('整理选中连线')
       .setIcon('wand-sparkles')
       .onClick(() => this.alignEdges(false)));
@@ -1484,6 +1489,23 @@ export default class CanvasStudioPlugin extends Plugin {
       menu.addItem((item) => item.setTitle(label).setIcon(icon).onClick(() => this.applyEdgeStyle(style)));
     }
     menu.showAtPosition(this.menuPosition(anchor));
+  }
+
+  private connectSelectedNodes(): void {
+    const canvas = this.currentCanvas();
+    if (!canvas || canvas.readonly) return;
+    const nodes = this.selection(canvas);
+    if (nodes.length !== 2) {
+      new Notice('请选中两个节点后再连接。', 2500);
+      return;
+    }
+    const nextData = connectNodes(canvas.getData(), nodes[0]!.id, nodes[1]!.id, randomId);
+    if (nextData === canvas.getData()) {
+      new Notice('节点已连接，或无法创建自连接。', 2200);
+      return;
+    }
+    replaceCanvasData(canvas, nextData);
+    new Notice('已连接选中节点。', 1600);
   }
 
   private openStyleMenu(anchor: HTMLElement): void {

@@ -142,6 +142,9 @@ creation, entering edit mode immediately after insertion.
 The 0.9.23 development build lets the shape menu create a new native flowchart
 shape when nothing is selected, while preserving selected-node shape editing.
 
+The 0.9.24 development build adds direct edge creation from two selected nodes
+with geometry-aware anchors and duplicate-edge protection.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual
