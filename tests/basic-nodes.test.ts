@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createBasicTextNode } from '../src/basic-nodes';
+import { createBasicTextNode, createShapeNode } from '../src/basic-nodes';
 
 test('creates a native editable text card', () => {
   const node = createBasicTextNode('text-1', 'text', { x: 100, y: 200 }, 'serif', 18);
@@ -17,4 +17,13 @@ test('creates a yellow native sticky note', () => {
   assert.equal(node.styleAttributes?.padding, 16);
   assert.equal(node.width, 260);
   assert.equal(node.height, 180);
+});
+
+test('creates a native flowchart shape without an existing selection', () => {
+  const node = createShapeNode('shape-1', 'diamond', { x: 10, y: 20 }, 'sans-serif', 16);
+  assert.equal(node.type, 'text');
+  assert.equal(node.styleAttributes?.shape, 'diamond');
+  assert.equal(node.width, 340);
+  assert.equal(node.height, 180);
+  assert.equal(node.text, '新建形状');
 });

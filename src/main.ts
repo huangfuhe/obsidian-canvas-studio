@@ -41,7 +41,7 @@ import { COMPONENT_LIBRARY, componentsByCategory, type ComponentSpec } from './c
 import { createSavedComponent, instantiateSavedComponent, type SavedCanvasComponent } from './saved-components';
 import { filterMediaItems, mediaItemsFromPaths, type MediaKind, type MediaItem } from './media';
 import { createLinkNode, normalizeLinkUrl } from './links';
-import { createBasicTextNode, type BasicTextKind } from './basic-nodes';
+import { createBasicTextNode, createShapeNode, type BasicShape, type BasicTextKind } from './basic-nodes';
 import { clientPointToCanvas, parseCssTransform } from './canvas-position';
 import { addWaypointAtLongestSegment, edgeRoutePoints, EDGE_WAYPOINTS_KEY, parseEdgeWaypoints, polylinePath, routeEdgeWithObstacles, serializeEdgeWaypoints, type EdgeWaypoint } from './edge-waypoints';
 import type { CanvasDocument, CanvasEdgeData, CanvasNodeData, CanvasStyleAttributes, LayoutDirection } from './types';
@@ -1726,9 +1726,23 @@ export default class CanvasStudioPlugin extends Plugin {
   private applyShape(shape: string | null): void {
     const canvas = this.currentCanvas();
     if (!canvas) return;
+    if (canvas.readonly) return;
     const ids = new Set(this.selection(canvas).filter((node) => node.type === 'text').map((node) => node.id));
     if (ids.size === 0) {
-      new Notice('请选择至少一个文本节点。', 2500);
+      const shapeValue = shape ?? 'rectangle';
+      const node = createShapeNode(
+        randomId('shape'),
+        shapeValue as BasicShape,
+        safeInsertionOrigin(canvas.getData(), true),
+        this.settings.defaultFontFamily,
+        this.settings.defaultFontSize
+      );
+      replaceCanvasData(canvas, { ...canvas.getData(), nodes: [...canvas.getData().nodes, node] });
+      window.setTimeout(() => {
+        this.focusNode(canvas, node.id);
+        canvas.nodes.get(node.id)?.startEditing?.();
+      }, 0);
+      new Notice('已创建流程图形状。', 1600);
       return;
     }
     const nextData = updateNodes(canvas.getData(), ids, (node) => {

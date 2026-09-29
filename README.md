@@ -139,6 +139,9 @@ and format copy/paste while leaving text-editor shortcuts untouched.
 The 0.9.22 development build adds standalone native text-card and sticky-note
 creation, entering edit mode immediately after insertion.
 
+The 0.9.23 development build lets the shape menu create a new native flowchart
+shape when nothing is selected, while preserving selected-node shape editing.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual
