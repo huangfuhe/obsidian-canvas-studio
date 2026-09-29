@@ -90,6 +90,9 @@ the same native nodes as click insertion.
 The 0.9.7 patch keeps the drag interaction active through the component modal
 overlay and shows a pointer-following placement preview.
 
+The 0.9.8 development build adds container snapping for moved nodes and
+component drops, keeping resulting native nodes inside a group or lane.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual

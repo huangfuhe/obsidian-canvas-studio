@@ -26,6 +26,7 @@ import { diagnoseCanvas, type CanvasHealthIssue } from './diagnostics';
 import { moveGroupChildren } from './group-follow';
 import { fitGroupsToChildren } from './group-layout';
 import { groupNodes, ungroupNodes } from './group-actions';
+import { snapFragmentIntoGroup, snapNodeIntoGroup } from './group-snap';
 import { computeMindMapLayout, moveNodesToLayout } from './layout';
 import { outlineToCanvas, parseMarkdownOutline } from './outline';
 import { findCanvasMatches, replaceAllMatches, replaceCurrentMatch, type CanvasSearchMatch } from './search';
@@ -269,13 +270,17 @@ export default class CanvasStudioPlugin extends Plugin {
       const movedData = moveGroupChildren(canvas.getData(), node.id, { x: node.prevX, y: node.prevY }, { x: node.x, y: node.y });
       if (movedData !== canvas.getData()) replaceCanvasData(canvas, movedData);
     }
-    if (!this.settings.smartSnap || this.snappingNodeIds.has(node.id) || canvas.readonly) return;
+    if (this.snappingNodeIds.has(node.id) || canvas.readonly) return;
     const data = node.getData();
+    const groups = canvas.getData().nodes.filter((candidate) => candidate.type === 'group');
+    const groupSnapped = snapNodeIntoGroup(data, groups, { threshold: this.settings.snapThreshold });
     const others = canvas.getData().nodes.filter((candidate) => candidate.id !== node.id);
-    const snapped = snapNodePosition(data, others, {
-      gridSize: this.settings.snapGridSize,
-      threshold: this.settings.snapThreshold
-    });
+    const snapped = this.settings.smartSnap
+      ? snapNodePosition(groupSnapped.node, others, {
+        gridSize: this.settings.snapGridSize,
+        threshold: this.settings.snapThreshold
+      })
+      : { x: groupSnapped.node.x, y: groupSnapped.node.y };
     if (snapped.x === data.x && snapped.y === data.y) return;
     this.snappingNodeIds.add(node.id);
     node.setData({ ...data, x: snapped.x, y: snapped.y });
@@ -899,7 +904,14 @@ export default class CanvasStudioPlugin extends Plugin {
   private insertComponentAt(component: ComponentSpec, origin: { x: number; y: number }): void {
     const canvas = this.currentCanvas();
     if (!canvas || canvas.readonly) return;
-    const fragment = component.build(origin, randomId);
+    const data = canvas.getData();
+    const initialFragment = component.build(origin, randomId);
+    const snapped = snapFragmentIntoGroup(
+      initialFragment.nodes,
+      data.nodes.filter((node) => node.type === 'group'),
+      origin
+    );
+    const fragment = component.build(snapped.origin, randomId);
     this.insertDocument(canvas, fragment);
     new Notice(`已插入组件：${component.name}`, 1800);
   }
