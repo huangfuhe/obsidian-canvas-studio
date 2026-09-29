@@ -68,6 +68,11 @@ export interface RuntimeCanvas {
   selectOnly?(node: RuntimeCanvasNode): void;
   deselectAll?(): void;
   zoomToSelection?(): void;
+  zoomToFit?(): void;
+  setViewport?(x: number, y: number, zoom: number): void;
+  tx?: number;
+  ty?: number;
+  tZoom?: number;
   posFromEvt?(event: MouseEvent | PointerEvent): { x: number; y: number };
 }
 
