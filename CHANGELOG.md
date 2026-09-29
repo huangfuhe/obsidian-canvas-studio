@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.40 - 2026-09-29
+
+### Added
+
+- 基础手绘模式：笔画点位保存到 `metadata.canvasStudio.strokes`，插件启用时以 SVG overlay 绘制。
+- “更多”菜单和命令面板支持确认后清除全部手绘笔迹。
+
 ## 0.9.39 - 2026-09-29
 
 ### Added

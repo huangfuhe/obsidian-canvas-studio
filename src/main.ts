@@ -46,8 +46,9 @@ import { createSavedComponent, instantiateSavedComponent, type SavedCanvasCompon
 import { filterMediaItems, mediaItemsFromPaths, type MediaKind, type MediaItem } from './media';
 import { createLinkNode, normalizeLinkUrl } from './links';
 import { createBasicTextNode, createShapeNode, type BasicShape, type BasicTextKind } from './basic-nodes';
-import { clientPointToCanvas, parseCssTransform } from './canvas-position';
+import { canvasPointToClient, clientPointToCanvas, parseCssTransform } from './canvas-position';
 import { addWaypointAtLongestSegment, edgeRoutePoints, EDGE_WAYPOINTS_KEY, parseEdgeWaypoints, polylinePath, routeEdgeWithObstacles, serializeEdgeWaypoints, type EdgeWaypoint } from './edge-waypoints';
+import { addCanvasStroke, canvasStrokes, clearCanvasStrokes, type CanvasStroke, type StrokePoint } from './strokes';
 import type { CanvasDocument, CanvasEdgeData, CanvasNodeData, CanvasStyleAttributes, LayoutDirection } from './types';
 
 interface CanvasStudioSettings {
@@ -77,6 +78,7 @@ const DEFAULT_SETTINGS: CanvasStudioSettings = {
 const TOOLBAR_ACTIONS = [
   { id: 'text', icon: 'text-cursor-input', label: '创建文本卡片', shortLabel: '文本' },
   { id: 'note', icon: 'sticky-note', label: '创建便签', shortLabel: '便签' },
+  { id: 'draw', icon: 'pencil', label: '手绘模式', shortLabel: '手绘' },
   { id: 'create-child', icon: 'git-branch', label: '创建子节点', shortLabel: '子节点' },
   { id: 'create-sibling', icon: 'git-merge', label: '创建同级节点', shortLabel: '同级' },
   { id: 'layout', icon: 'layout-dashboard', label: '自动布局思维导图', shortLabel: '布局' },
@@ -91,6 +93,7 @@ const TOOLBAR_ACTIONS = [
   { id: 'style', icon: 'type', label: '字体与文本样式', shortLabel: '字体' },
   { id: 'theme', icon: 'palette', label: '应用白板主题', shortLabel: '主题' },
   { id: 'grid', icon: 'grid-2x2', label: '切换画布网格', shortLabel: '网格' },
+  { id: 'clear-draw', icon: 'eraser', label: '清除手绘', shortLabel: '清除' },
   { id: 'search', icon: 'search', label: '搜索与替换文本', shortLabel: '搜索' },
   { id: 'export', icon: 'download', label: '导出 PNG/SVG 图片', shortLabel: '导出' },
   { id: 'present', icon: 'presentation', label: '开始演示模式', shortLabel: '演示' },
@@ -107,10 +110,10 @@ const TOOLBAR_ACTIONS = [
 
 type ToolbarActionId = typeof TOOLBAR_ACTIONS[number]['id'];
 const SECONDARY_TOOLBAR_ACTIONS = new Set<ToolbarActionId>([
-  'theme', 'grid', 'search', 'export', 'present', 'previous-node', 'next-node', 'end-presentation', 'info', 'diagnostics', 'zoom-selection', 'zoom-fit', 'copy-style', 'paste-style'
+  'theme', 'grid', 'clear-draw', 'search', 'export', 'present', 'previous-node', 'next-node', 'end-presentation', 'info', 'diagnostics', 'zoom-selection', 'zoom-fit', 'copy-style', 'paste-style'
 ]);
 const READONLY_TOOLBAR_ACTIONS = new Set<ToolbarActionId | 'more'>([
-  'search', 'grid', 'export', 'present', 'previous-node', 'next-node', 'end-presentation', 'info', 'diagnostics', 'zoom-selection', 'zoom-fit', 'more'
+  'search', 'grid', 'clear-draw', 'export', 'present', 'previous-node', 'next-node', 'end-presentation', 'info', 'diagnostics', 'zoom-selection', 'zoom-fit', 'more'
 ]);
 const COMPONENT_MIME = 'application/x-canvas-studio-component';
 
@@ -132,6 +135,11 @@ export default class CanvasStudioPlugin extends Plugin {
   private edgeWaypointDisplay: SVGPathElement | null = null;
   private edgeWaypointTransient = new Map<string, EdgeWaypoint[]>();
   private edgeWaypointDrag: { canvas: RuntimeCanvas; edgeId: string; index: number } | null = null;
+  private drawingCanvas: RuntimeCanvas | null = null;
+  private drawingOverlay: SVGSVGElement | null = null;
+  private drawingActive = false;
+  private drawingPointerId: number | null = null;
+  private drawingPoints: StrokePoint[] = [];
 
   override async onload(): Promise<void> {
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
@@ -181,6 +189,11 @@ export default class CanvasStudioPlugin extends Plugin {
       id: 'delete-selection',
       name: 'Canvas Studio: 删除选中对象',
       checkCallback: (checking) => this.commandAvailability(checking, () => this.deleteSelectedObjects())
+    });
+    this.addCommand({
+      id: 'clear-drawing',
+      name: 'Canvas Studio: 清除手绘',
+      checkCallback: (checking) => this.commandAvailability(checking, () => this.clearDrawingStrokes())
     });
     this.addCommand({
       id: 'toggle-group-collapse',
@@ -294,6 +307,9 @@ export default class CanvasStudioPlugin extends Plugin {
     });
     this.registerDomEvent(document, 'pointermove', (event) => this.handleEdgeWaypointPointerMove(event));
     this.registerDomEvent(document, 'pointerup', () => this.handleEdgeWaypointPointerUp());
+    this.registerDomEvent(document, 'pointerdown', (event) => this.handleDrawingPointerDown(event));
+    this.registerDomEvent(document, 'pointermove', (event) => this.handleDrawingPointerMove(event));
+    this.registerDomEvent(document, 'pointerup', (event) => this.handleDrawingPointerUp(event));
     this.registerEvent(this.app.workspace.on('layout-change', () => this.refreshToolbar()));
     this.registerEvent(this.app.workspace.on('active-leaf-change', () => this.refreshToolbar()));
     this.registerEvent(this.app.workspace.on('advanced-canvas:canvas-changed' as never, () => this.refreshToolbar()));
@@ -460,6 +476,7 @@ export default class CanvasStudioPlugin extends Plugin {
       this.inspector.setAttribute('aria-label', 'Canvas Studio 属性面板');
       canvas.wrapperEl.appendChild(this.inspector);
       this.mountComponentDropTarget(canvas);
+      this.drawingCanvas = canvas;
       this.syncCanvasThemeClass(canvas);
       this.syncCanvasGridClass(canvas);
       this.syncCanvasBackgroundClass(canvas);
@@ -503,6 +520,7 @@ export default class CanvasStudioPlugin extends Plugin {
     switch (actionId) {
       case 'text': this.insertBasicTextNode('text'); break;
       case 'note': this.insertBasicTextNode('sticky-note'); break;
+      case 'draw': this.toggleDrawingMode(); break;
       case 'create-child': this.createChildNode(); break;
       case 'create-sibling': this.createSiblingNode(); break;
       case 'layout': this.layoutMindMap(); break;
@@ -517,6 +535,7 @@ export default class CanvasStudioPlugin extends Plugin {
       case 'style': this.openStyleMenu(anchor); break;
       case 'theme': this.openThemeMenu(anchor); break;
       case 'grid': this.toggleCanvasGrid(); break;
+      case 'clear-draw': this.clearDrawingStrokes(); break;
       case 'search': this.openSearch(); break;
       case 'export': this.openExportMenu(anchor); break;
       case 'present': this.runAdvancedCommand('advanced-canvas:start-presentation'); break;
@@ -806,6 +825,7 @@ export default class CanvasStudioPlugin extends Plugin {
 
   private unmountToolbar(): void {
     this.unmountComponentDropTarget();
+    this.stopDrawingMode();
     this.clearEdgeWaypointOverlay();
     if (this.toolbarCanvas?.wrapperEl) {
       this.toolbarCanvas.wrapperEl.classList.remove(...CANVAS_THEMES.map((theme) => theme.canvasClass));
@@ -817,6 +837,111 @@ export default class CanvasStudioPlugin extends Plugin {
     this.toolbarCanvas = null;
     this.inspector = null;
     this.toolbarContext = null;
+  }
+
+  private toggleDrawingMode(): void {
+    const canvas = this.currentCanvas();
+    if (!canvas || canvas.readonly) return;
+    if (this.drawingActive) {
+      this.stopDrawingMode();
+      return;
+    }
+    this.drawingCanvas = canvas;
+    this.drawingActive = true;
+    canvas.wrapperEl?.classList.add('canvas-studio-drawing-active');
+    this.renderDrawingOverlay(canvas);
+    new Notice('已进入手绘模式，再次点击“手绘”退出。', 1800);
+  }
+
+  private stopDrawingMode(): void {
+    this.drawingActive = false;
+    this.drawingPointerId = null;
+    this.drawingPoints = [];
+    this.drawingCanvas?.wrapperEl?.classList.remove('canvas-studio-drawing-active');
+    this.drawingOverlay?.remove();
+    this.drawingOverlay = null;
+  }
+
+  private handleDrawingPointerDown(event: PointerEvent): void {
+    const canvas = this.drawingCanvas;
+    if (!this.drawingActive || !canvas || canvas.readonly || event.button !== 0) return;
+    if (event.target instanceof HTMLElement && event.target.closest('.canvas-studio-toolbar, .canvas-studio-inspector')) return;
+    if (!canvas.wrapperEl?.contains(event.target as Node)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    this.drawingPointerId = event.pointerId;
+    this.drawingPoints = [this.componentDropPoint(canvas, event.clientX, event.clientY)];
+    canvas.wrapperEl?.setPointerCapture?.(event.pointerId);
+    this.renderDrawingOverlay(canvas, this.drawingPoints);
+  }
+
+  private handleDrawingPointerMove(event: PointerEvent): void {
+    if (!this.drawingActive || this.drawingPointerId !== event.pointerId || !this.drawingCanvas) return;
+    event.preventDefault();
+    const point = this.componentDropPoint(this.drawingCanvas, event.clientX, event.clientY);
+    const previous = this.drawingPoints[this.drawingPoints.length - 1];
+    if (!previous || Math.hypot(point.x - previous.x, point.y - previous.y) >= 3) this.drawingPoints.push(point);
+    this.renderDrawingOverlay(this.drawingCanvas, this.drawingPoints);
+  }
+
+  private handleDrawingPointerUp(event: PointerEvent): void {
+    if (!this.drawingActive || this.drawingPointerId !== event.pointerId || !this.drawingCanvas) return;
+    event.preventDefault();
+    const canvas = this.drawingCanvas;
+    const points = this.drawingPoints;
+    this.drawingPointerId = null;
+    this.drawingPoints = [];
+    if (points.length >= 2) {
+      replaceCanvasData(canvas, addCanvasStroke(canvas.getData(), {
+        id: randomId('stroke'),
+        points,
+        color: 'var(--interactive-accent)',
+        width: 3
+      }));
+    }
+    this.renderDrawingOverlay(canvas);
+  }
+
+  private renderDrawingOverlay(canvas: RuntimeCanvas, previewPoints?: StrokePoint[]): void {
+    const wrapper = canvas.wrapperEl;
+    const surface = canvas.canvasEl ?? wrapper;
+    if (!wrapper || !surface) return;
+    if (!this.drawingOverlay) {
+      this.drawingOverlay = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      this.drawingOverlay.classList.add('canvas-studio-drawing-overlay');
+      wrapper.appendChild(this.drawingOverlay);
+    }
+    const wrapperRect = wrapper.getBoundingClientRect();
+    this.drawingOverlay.setAttribute('viewBox', `0 0 ${wrapperRect.width} ${wrapperRect.height}`);
+    this.drawingOverlay.setAttribute('width', String(wrapperRect.width));
+    this.drawingOverlay.setAttribute('height', String(wrapperRect.height));
+    this.drawingOverlay.replaceChildren();
+    const transform = parseCssTransform(window.getComputedStyle(surface).transform);
+    const surfaceRect = surface.getBoundingClientRect();
+    const drawPath = (points: StrokePoint[], color = 'var(--interactive-accent)', width = 3) => {
+      if (points.length < 2) return;
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      const commands = points.map((point, index) => {
+        const client = canvasPointToClient(point, surfaceRect, transform);
+        return `${index === 0 ? 'M' : 'L'} ${client.x - wrapperRect.left} ${client.y - wrapperRect.top}`;
+      });
+      path.setAttribute('d', commands.join(' '));
+      path.setAttribute('stroke', color);
+      path.setAttribute('stroke-width', String(width));
+      path.setAttribute('fill', 'none');
+      path.setAttribute('stroke-linecap', 'round');
+      path.setAttribute('stroke-linejoin', 'round');
+      this.drawingOverlay?.appendChild(path);
+    };
+    for (const stroke of canvasStrokes(canvas.getData())) drawPath(stroke.points, stroke.color, stroke.width);
+    if (previewPoints) drawPath(previewPoints);
+  }
+
+  private clearDrawingStrokes(): void {
+    const canvas = this.currentCanvas();
+    if (!canvas || canvas.readonly || !window.confirm('清除当前画布的所有手绘笔迹？')) return;
+    replaceCanvasData(canvas, clearCanvasStrokes(canvas.getData()));
+    this.renderDrawingOverlay(canvas);
   }
 
   private refreshEdgeWaypointOverlay(canvas?: RuntimeCanvas): void {

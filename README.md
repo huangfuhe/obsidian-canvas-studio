@@ -190,6 +190,9 @@ optional Canvas Studio metadata.
 The 0.9.39 development build adds four local canvas background presets in the
 empty-selection inspector.
 
+The 0.9.40 development build adds a basic local freehand layer stored in Canvas
+Studio metadata, with an explicit clear-strokes action.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual

@@ -63,6 +63,18 @@
   content: '';
 }
 
+.canvas-studio-drawing-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.canvas-wrapper.canvas-studio-drawing-active {
+  cursor: crosshair;
+}
+
 .canvas-studio-edge-waypoint-hidden {
   opacity: 0 !important;
 }

@@ -38,3 +38,14 @@ export function clientPointToCanvas(
     y: (clientY - rect.top) / (transform.scaleY || 1)
   };
 }
+
+export function canvasPointToClient(
+  point: { x: number; y: number },
+  rect: CanvasSurfaceRect,
+  transform: CanvasTransform = { scaleX: 1, scaleY: 1 }
+): { x: number; y: number } {
+  return {
+    x: rect.left + point.x * (transform.scaleX || 1),
+    y: rect.top + point.y * (transform.scaleY || 1)
+  };
+}
