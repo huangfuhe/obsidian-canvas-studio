@@ -145,6 +145,7 @@ export default class CanvasStudioPlugin extends Plugin {
   private drawingActive = false;
   private drawingPointerId: number | null = null;
   private drawingPoints: StrokePoint[] = [];
+  private laneTargetNotice: HTMLElement | null = null;
 
   override async onload(): Promise<void> {
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
@@ -468,6 +469,16 @@ export default class CanvasStudioPlugin extends Plugin {
       if (runtimeNode.getData().type !== 'group' || !runtimeNode.nodeEl) continue;
       runtimeNode.nodeEl.toggleClass('canvas-studio-lane-target', runtimeNode.id === groupId);
     }
+    const group = groupId ? canvas.getData().nodes.find((node) => node.type === 'group' && node.id === groupId) : undefined;
+    if (!group || !canvas.wrapperEl) {
+      this.laneTargetNotice?.remove();
+      this.laneTargetNotice = null;
+      return;
+    }
+    if (!this.laneTargetNotice || !canvas.wrapperEl.contains(this.laneTargetNotice)) {
+      this.laneTargetNotice = canvas.wrapperEl.createDiv({ cls: 'canvas-studio-lane-target-notice' });
+    }
+    this.laneTargetNotice.setText(`目标泳道：${group.label ?? '未命名泳道'}`);
   }
 
   private showSnapGuides(canvas: RuntimeCanvas, x?: number, y?: number): void {
@@ -937,6 +948,8 @@ export default class CanvasStudioPlugin extends Plugin {
     this.unmountComponentDropTarget();
     this.stopDrawingMode();
     this.clearEdgeWaypointOverlay();
+    this.laneTargetNotice?.remove();
+    this.laneTargetNotice = null;
     if (this.toolbarCanvas?.wrapperEl) {
       this.toolbarCanvas.wrapperEl.classList.remove(...CANVAS_THEMES.map((theme) => theme.canvasClass));
       this.toolbarCanvas.wrapperEl.style.removeProperty('--canvas-background');
