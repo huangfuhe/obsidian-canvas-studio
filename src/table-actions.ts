@@ -116,3 +116,63 @@ export function removeLastTableColumn(data: CanvasDocument, groupId: string): Ca
   const group = data.nodes.find((node) => node.id === groupId && node.type === 'group');
   return group ? removeTableCells(data, group, 'column') : data;
 }
+
+export function insertTableRowAfter(data: CanvasDocument, cellId: string, idFactory: (prefix: string) => string): CanvasDocument {
+  const cell = data.nodes.find((node) => node.id === cellId);
+  const groupId = cell?.styleAttributes?.canvasStudioTableId;
+  const row = Number(cell?.styleAttributes?.canvasStudioTableRow);
+  const group = typeof groupId === 'string' ? data.nodes.find((node) => node.id === groupId && node.type === 'group') : undefined;
+  if (!cell || !group || !Number.isFinite(row)) return data;
+  const metrics = tableMetrics(group);
+  if (!metrics) return data;
+  const insertAt = row + 1;
+  const shifted = data.nodes.map((node) => {
+    if (node.styleAttributes?.canvasStudioTableId !== group.id) return node;
+    const nodeRow = Number(node.styleAttributes.canvasStudioTableRow);
+    if (!Number.isFinite(nodeRow) || nodeRow < insertAt) return node;
+    return {
+      ...node,
+      y: node.y + metrics.cellHeight,
+      styleAttributes: { ...(node.styleAttributes ?? {}), canvasStudioTableRow: nodeRow + 1 }
+    };
+  });
+  const cells = Array.from({ length: metrics.columns }, (_, column) => cellNode(group, metrics, insertAt, column, idFactory));
+  return {
+    ...data,
+    nodes: shifted.map((node) => node.id === group.id ? {
+      ...node,
+      height: (metrics.rows + 1) * metrics.cellHeight,
+      styleAttributes: { ...(node.styleAttributes ?? {}), canvasStudioTableRows: metrics.rows + 1 }
+    } : node).concat(cells)
+  };
+}
+
+export function insertTableColumnAfter(data: CanvasDocument, cellId: string, idFactory: (prefix: string) => string): CanvasDocument {
+  const cell = data.nodes.find((node) => node.id === cellId);
+  const groupId = cell?.styleAttributes?.canvasStudioTableId;
+  const column = Number(cell?.styleAttributes?.canvasStudioTableColumn);
+  const group = typeof groupId === 'string' ? data.nodes.find((node) => node.id === groupId && node.type === 'group') : undefined;
+  if (!cell || !group || !Number.isFinite(column)) return data;
+  const metrics = tableMetrics(group);
+  if (!metrics) return data;
+  const insertAt = column + 1;
+  const shifted = data.nodes.map((node) => {
+    if (node.styleAttributes?.canvasStudioTableId !== group.id) return node;
+    const nodeColumn = Number(node.styleAttributes.canvasStudioTableColumn);
+    if (!Number.isFinite(nodeColumn) || nodeColumn < insertAt) return node;
+    return {
+      ...node,
+      x: node.x + metrics.cellWidth,
+      styleAttributes: { ...(node.styleAttributes ?? {}), canvasStudioTableColumn: nodeColumn + 1 }
+    };
+  });
+  const cells = Array.from({ length: metrics.rows }, (_, row) => cellNode(group, metrics, row, insertAt, idFactory));
+  return {
+    ...data,
+    nodes: shifted.map((node) => node.id === group.id ? {
+      ...node,
+      width: (metrics.columns + 1) * metrics.cellWidth,
+      styleAttributes: { ...(node.styleAttributes ?? {}), canvasStudioTableColumns: metrics.columns + 1 }
+    } : node).concat(cells)
+  };
+}

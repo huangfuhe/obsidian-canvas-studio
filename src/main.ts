@@ -42,7 +42,7 @@ import { snapNodePosition } from './snap';
 import { instantiateSwimlane, SWIMLANE_TEMPLATES } from './swimlane';
 import { FLOW_TEMPLATES, instantiateFlowTemplate } from './templates';
 import { applyCanvasTheme, CANVAS_THEMES } from './themes';
-import { addTableColumn, addTableRow, removeLastTableColumn, removeLastTableRow } from './table-actions';
+import { addTableColumn, addTableRow, insertTableColumnAfter, insertTableRowAfter, removeLastTableColumn, removeLastTableRow } from './table-actions';
 import { canvasBackground, canvasGridEnabled, canvasMode, setCanvasBackground, setCanvasGrid, setCanvasMode, type CanvasBackground, type CanvasMode } from './canvas-view';
 import { COMPONENT_LIBRARY, componentsByCategory, filterComponents, type ComponentSpec } from './components';
 import { createSavedComponent, instantiateSavedComponent, type SavedCanvasComponent } from './saved-components';
@@ -780,6 +780,14 @@ export default class CanvasStudioPlugin extends Plugin {
     }
 
     const links = nodes.filter((node) => node.type === 'link');
+    if (nodes.length === 1 && typeof nodes[0]?.styleAttributes?.canvasStudioTableId === 'string') {
+      const cellField = field('单元格结构');
+      const cellActions = cellField.createDiv({ cls: 'canvas-studio-inspector-segmented' });
+      const insertRow = cellActions.createEl('button', { text: '下方插入行' });
+      insertRow.addEventListener('click', () => this.insertSelectedTableDimension('row', nodes[0]!.id));
+      const insertColumn = cellActions.createEl('button', { text: '右侧插入列' });
+      insertColumn.addEventListener('click', () => this.insertSelectedTableDimension('column', nodes[0]!.id));
+    }
     if (links.length === 1) {
       const linkField = field('链接地址');
       const linkUrl = linkField.createEl('input', {
@@ -2573,6 +2581,18 @@ export default class CanvasStudioPlugin extends Plugin {
     }
     replaceCanvasData(canvas, nextData);
     new Notice(axis === 'row' ? '已删除表格末行。' : '已删除表格末列。', 1600);
+  }
+
+  private insertSelectedTableDimension(axis: 'row' | 'column', cellId: string): void {
+    const canvas = this.currentCanvas();
+    if (!canvas || canvas.readonly) return;
+    const data = canvas.getData();
+    const nextData = axis === 'row'
+      ? insertTableRowAfter(data, cellId, randomId)
+      : insertTableColumnAfter(data, cellId, randomId);
+    if (nextData === data) return;
+    replaceCanvasData(canvas, nextData);
+    new Notice(axis === 'row' ? '已在下方插入表格行。' : '已在右侧插入表格列。', 1600);
   }
 
   private fitSelectedGroups(): void {

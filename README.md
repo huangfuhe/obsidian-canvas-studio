@@ -326,6 +326,8 @@ semantic references.
 The 0.9.82 patch expands node rotation from fixed quarters to arbitrary angles
 with 15-degree step controls.
 
+The 0.9.83 patch adds row/column insertion after a selected semantic table cell.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { COMPONENT_LIBRARY } from '../src/components';
-import { addTableColumn, addTableRow, removeLastTableColumn, removeLastTableRow } from '../src/table-actions';
+import { addTableColumn, addTableRow, insertTableColumnAfter, insertTableRowAfter, removeLastTableColumn, removeLastTableRow } from '../src/table-actions';
 
 test('adds rows and columns to a semantic native Canvas table', () => {
   let index = 0;
@@ -28,4 +28,20 @@ test('adds rows and columns to a semantic native Canvas table', () => {
   const withoutColumn = removeLastTableColumn(withoutRow, group.id);
   assert.equal(withoutColumn.nodes[0]?.styleAttributes?.canvasStudioTableColumns, 3);
   assert.equal(withoutColumn.nodes.filter((node) => node.styleAttributes?.canvasStudioTableColumn === 3).length, 0);
+});
+
+test('inserts a row and column after a selected semantic cell', () => {
+  let index = 0;
+  const table = COMPONENT_LIBRARY.find((component) => component.id === 'table')!;
+  const data = table.build({ x: 0, y: 0 }, (prefix) => `${prefix}-${++index}`);
+  const cell = data.nodes.find((node) => node.styleAttributes?.canvasStudioTableRow === 1 && node.styleAttributes?.canvasStudioTableColumn === 1)!;
+  const afterRow = insertTableRowAfter(data, cell.id, (prefix) => `${prefix}-${++index}`);
+  assert.equal(afterRow.nodes[0]?.styleAttributes?.canvasStudioTableRows, 5);
+  assert.equal(afterRow.nodes.filter((node) => node.styleAttributes?.canvasStudioTableRow === 2).length, 3);
+  assert.equal(afterRow.nodes.find((node) => node.text === '单元格 2-2')?.styleAttributes?.canvasStudioTableRow, 3);
+
+  const afterColumn = insertTableColumnAfter(afterRow, cell.id, (prefix) => `${prefix}-${++index}`);
+  assert.equal(afterColumn.nodes[0]?.styleAttributes?.canvasStudioTableColumns, 4);
+  assert.equal(afterColumn.nodes.filter((node) => node.styleAttributes?.canvasStudioTableColumn === 2).length, 5);
+  assert.equal(afterColumn.nodes.find((node) => node.text === '单元格 1-3')?.styleAttributes?.canvasStudioTableColumn, 3);
 });
