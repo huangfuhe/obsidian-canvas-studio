@@ -2153,6 +2153,7 @@ export default class CanvasStudioPlugin extends Plugin {
     menu.addItem((item) => item.setTitle('粗体').setIcon('bold').onClick(() => this.applyStyle({ fontWeight: 700 })));
     menu.addItem((item) => item.setTitle('斜体').setIcon('italic').onClick(() => this.applyStyle({ fontStyle: 'italic' })));
     menu.addItem((item) => item.setTitle('下划线').setIcon('underline').onClick(() => this.applyStyle({ textDecoration: 'underline' })));
+    menu.addItem((item) => item.setTitle('删除线').setIcon('strikethrough').onClick(() => this.applyStyle({ textDecoration: 'line-through' })));
     menu.addItem((item) => item.setTitle('项目符号列表').setIcon('list').onClick(() => this.applyListStyle('bullet')));
     menu.addItem((item) => item.setTitle('编号列表').setIcon('list-ordered').onClick(() => this.applyListStyle('ordered')));
     menu.addItem((item) => item.setTitle('清除强调').setIcon('remove-formatting').onClick(() => this.applyStyle({ fontWeight: null, fontStyle: null, textDecoration: null })));
@@ -2356,7 +2357,7 @@ export default class CanvasStudioPlugin extends Plugin {
     if (textSelection) {
       const node = canvas.getData().nodes.find((item) => item.id === textSelection.nodeId);
       if (node) {
-        const marker = patch.fontWeight === 700 ? '**' : patch.fontStyle === 'italic' ? '*' : patch.textDecoration === 'underline' ? null : undefined;
+        const marker = patch.fontWeight === 700 ? '**' : patch.fontStyle === 'italic' ? '*' : patch.textDecoration === 'line-through' ? '~~' : patch.textDecoration === 'underline' ? null : undefined;
         const styledText = marker
           ? markdownTextSelection(textSelection.sourceText, textSelection.from, textSelection.to, marker)
           : styleTextSelection(textSelection.sourceText, textSelection.from, textSelection.to, patch);

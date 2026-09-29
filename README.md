@@ -299,6 +299,8 @@ mode.
 The 0.9.72 patch adds bullet-list and ordered-list formatting for selected text
 lines while retaining native Markdown content.
 
+The 0.9.73 patch adds selected-text strikethrough using native Markdown markers.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual

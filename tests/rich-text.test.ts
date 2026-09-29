@@ -26,6 +26,7 @@ test('rejects invalid ranges and node-only styles', () => {
 test('wraps selected text with Markdown emphasis markers', () => {
   assert.equal(markdownTextSelection('Canvas Studio', 0, 6, '**'), '**Canvas** Studio');
   assert.equal(markdownTextSelection('Canvas Studio', 7, 13, '*'), 'Canvas *Studio*');
+  assert.equal(markdownTextSelection('Canvas Studio', 7, 13, '~~'), 'Canvas ~~Studio~~');
 });
 
 test('adds a bullet or ordered list to selected lines', () => {
