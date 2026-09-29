@@ -246,6 +246,10 @@ to make the drop destination easier to scan.
 The 0.9.56 patch adds depth-aware mind-map themes for root and branch levels,
 using only native node styles and optional Canvas Studio metadata.
 
+The 0.9.57 patch adds persistent mind-map branch collapse/expand. Descendant
+nodes and their runtime edges are hidden or restored without changing Canvas
+node types.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual

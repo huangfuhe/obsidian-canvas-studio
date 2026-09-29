@@ -86,3 +86,41 @@ export function applyMindMapTheme(data: CanvasDocument, rootId: string, theme: M
     metadata: { ...metadata, canvasStudio: { ...studio, [MIND_MAP_ROOT_KEY]: rootId, mindMapTheme: theme.id } }
   };
 }
+
+const MIND_MAP_COLLAPSED_KEY = 'collapsedMindMapNodeIds';
+
+export function collapsedMindMapNodeIds(data: CanvasDocument): Set<string> {
+  const { studio } = studioMetadata(data);
+  const raw = studio[MIND_MAP_COLLAPSED_KEY];
+  if (!Array.isArray(raw)) return new Set();
+  const nodeIds = new Set(data.nodes.map((node) => node.id));
+  return new Set(raw.filter((value): value is string => typeof value === 'string' && nodeIds.has(value)));
+}
+
+export function toggleMindMapBranch(data: CanvasDocument, nodeId: string): CanvasDocument {
+  if (!data.nodes.some((node) => node.id === nodeId)) return data;
+  const { metadata, studio } = studioMetadata(data);
+  const collapsed = collapsedMindMapNodeIds(data);
+  if (collapsed.has(nodeId)) collapsed.delete(nodeId);
+  else collapsed.add(nodeId);
+  return { ...data, metadata: { ...metadata, canvasStudio: { ...studio, [MIND_MAP_COLLAPSED_KEY]: [...collapsed] } } };
+}
+
+export function hiddenMindMapNodeIds(data: CanvasDocument): Set<string> {
+  const collapsed = collapsedMindMapNodeIds(data);
+  if (collapsed.size === 0) return new Set();
+  const children = new Map<string, string[]>();
+  for (const edge of data.edges) children.set(edge.fromNode, [...(children.get(edge.fromNode) ?? []), edge.toNode]);
+  const hidden = new Set<string>();
+  const queue = [...collapsed];
+  while (queue.length > 0) {
+    const parent = queue.shift();
+    if (!parent) continue;
+    for (const child of children.get(parent) ?? []) {
+      if (hidden.has(child)) continue;
+      hidden.add(child);
+      queue.push(child);
+    }
+  }
+  return hidden;
+}

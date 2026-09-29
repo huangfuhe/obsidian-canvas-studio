@@ -37,7 +37,7 @@ import { computeMindMapLayout, moveNodesToLayout } from './layout';
 import { outlineToCanvas, parseMarkdownOutline } from './outline';
 import { findCanvasMatches, replaceAllMatches, replaceCurrentMatch, type CanvasSearchMatch } from './search';
 import { markdownTextSelection, styleTextSelection, type TextSelectionSnapshot } from './rich-text';
-import { applyMindMapTheme, mindMapRootId, MIND_MAP_THEMES, setMindMapRoot as setCanvasMindMapRoot } from './mindmap';
+import { applyMindMapTheme, collapsedMindMapNodeIds, hiddenMindMapNodeIds, mindMapRootId, MIND_MAP_THEMES, setMindMapRoot as setCanvasMindMapRoot, toggleMindMapBranch } from './mindmap';
 import { snapNodePosition } from './snap';
 import { instantiateSwimlane, SWIMLANE_TEMPLATES } from './swimlane';
 import { FLOW_TEMPLATES, instantiateFlowTemplate } from './templates';
@@ -192,6 +192,11 @@ export default class CanvasStudioPlugin extends Plugin {
       checkCallback: (checking) => this.commandAvailability(checking, () => this.setMindMapRoot())
     });
     this.addCommand({
+      id: 'toggle-mindmap-branch',
+      name: 'Canvas Studio: 折叠/展开思维导图分支',
+      checkCallback: (checking) => this.commandAvailability(checking, () => this.toggleMindMapBranch())
+    });
+    this.addCommand({
       id: 'copy-style',
       name: 'Canvas Studio: 复制节点格式',
       checkCallback: (checking) => this.commandAvailability(checking, () => this.copyStyle())
@@ -335,7 +340,11 @@ export default class CanvasStudioPlugin extends Plugin {
     this.registerDomEvent(document, 'pointerup', (event) => this.handleDrawingPointerUp(event));
     this.registerEvent(this.app.workspace.on('layout-change', () => this.refreshToolbar()));
     this.registerEvent(this.app.workspace.on('active-leaf-change', () => this.refreshToolbar()));
-    this.registerEvent(this.app.workspace.on('advanced-canvas:canvas-changed' as never, () => this.refreshToolbar()));
+    this.registerEvent(this.app.workspace.on('advanced-canvas:canvas-changed' as never, (...args: unknown[]) => {
+      this.refreshToolbar();
+      const canvas = args[0] as RuntimeCanvas | undefined;
+      if (canvas) this.syncMindMapVisibility(canvas);
+    }));
     this.registerEvent(this.app.workspace.on('advanced-canvas:selection-changed' as never, () => this.updateToolbarState()));
     this.registerEvent(this.app.workspace.on('advanced-canvas:selection-changed' as never, (...args: unknown[]) => {
       this.refreshEdgeWaypointOverlay(args[0] as RuntimeCanvas | undefined);
@@ -343,6 +352,8 @@ export default class CanvasStudioPlugin extends Plugin {
     this.registerEvent(this.app.workspace.on('advanced-canvas:node-rendered' as never, (...args: unknown[]) => {
       const node = args[1] as RuntimeCanvasNode | undefined;
       if (node) this.applyTypography(node);
+      const canvas = args[0] as RuntimeCanvas | undefined;
+      if (canvas) this.syncMindMapVisibility(canvas);
     }));
     this.registerEvent(this.app.workspace.on('advanced-canvas:node-moved' as never, (...args: unknown[]) => {
       const canvas = args[0] as RuntimeCanvas | undefined;
@@ -361,7 +372,10 @@ export default class CanvasStudioPlugin extends Plugin {
   }
 
   override onunload(): void {
-    for (const node of this.toolbarCanvas?.nodes.values() ?? []) this.clearTypography(node);
+    for (const node of this.toolbarCanvas?.nodes.values() ?? []) {
+      this.clearTypography(node);
+      node.nodeEl?.style.removeProperty('display');
+    }
     this.unmountToolbar();
     this.clearEdgeWaypointOverlay();
   }
@@ -533,6 +547,7 @@ export default class CanvasStudioPlugin extends Plugin {
       this.syncCanvasGridClass(canvas);
       this.syncCanvasBackgroundClass(canvas);
       for (const node of canvas.nodes.values()) this.applyTypography(node);
+      this.syncMindMapVisibility(canvas);
       this.updateToolbarState();
     }, 0);
   }
@@ -714,6 +729,13 @@ export default class CanvasStudioPlugin extends Plugin {
         cls: 'canvas-studio-inspector-action'
       });
       rootAction.addEventListener('click', () => this.setMindMapRoot());
+      if (activeCanvas.getData().edges.some((edge) => edge.fromNode === nodes[0]?.id)) {
+        const branchAction = mindMapField.createEl('button', {
+          text: collapsedMindMapNodeIds(activeCanvas.getData()).has(nodes[0]!.id) ? '展开思维导图分支' : '折叠思维导图分支',
+          cls: 'canvas-studio-inspector-action'
+        });
+        branchAction.addEventListener('click', () => this.toggleMindMapBranch());
+      }
     }
     if (activeCanvas && (mindMapRootId(activeCanvas.getData()) || nodes.length === 1)) {
       const mindMapField = field('思维导图主题');
@@ -1441,6 +1463,32 @@ export default class CanvasStudioPlugin extends Plugin {
     const nextRoot = currentRoot === node.id ? null : node.id;
     replaceCanvasData(canvas, setCanvasMindMapRoot(canvas.getData(), nextRoot));
     new Notice(nextRoot ? '已设为思维导图根节点。' : '已取消思维导图根节点。', 1800);
+  }
+
+  private toggleMindMapBranch(): void {
+    const canvas = this.currentCanvas();
+    if (!canvas || canvas.readonly) return;
+    const [node] = this.selection(canvas);
+    if (!node) {
+      new Notice('请选择思维导图节点。', 2200);
+      return;
+    }
+    const wasCollapsed = collapsedMindMapNodeIds(canvas.getData()).has(node.id);
+    replaceCanvasData(canvas, toggleMindMapBranch(canvas.getData(), node.id));
+    this.syncMindMapVisibility(canvas);
+    new Notice(wasCollapsed ? '已展开思维导图分支。' : '已折叠思维导图分支。', 1800);
+  }
+
+  private syncMindMapVisibility(canvas: RuntimeCanvas): void {
+    const hidden = hiddenMindMapNodeIds(canvas.getData());
+    for (const runtimeNode of canvas.nodes.values()) {
+      if (runtimeNode.nodeEl) runtimeNode.nodeEl.style.display = hidden.has(runtimeNode.id) ? 'none' : '';
+    }
+    const runtimeEdges = (canvas as unknown as { edges?: Map<string, { getData(): CanvasEdgeData; path?: { display?: SVGPathElement } }> }).edges;
+    for (const edge of runtimeEdges?.values() ?? []) {
+      const data = edge.getData();
+      if (edge.path?.display) edge.path.display.style.display = hidden.has(data.fromNode) || hidden.has(data.toNode) ? 'none' : '';
+    }
   }
 
   private openMindMapThemeMenu(anchor: HTMLElement): void {

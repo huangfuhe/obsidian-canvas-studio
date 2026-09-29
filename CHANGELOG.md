@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.57 - 2026-09-29
+
+### Added
+
+- 思维导图节点支持折叠/展开分支，状态写入 `metadata.canvasStudio.collapsedMindMapNodeIds`。
+- 折叠时隐藏后代节点和关联连线，展开时恢复显示。
+
 ## 0.9.56 - 2026-09-29
 
 ### Added

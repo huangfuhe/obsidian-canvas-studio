@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { applyMindMapTheme, mindMapDepths, mindMapRootId, MIND_MAP_THEMES, setMindMapRoot } from '../src/mindmap';
+import { applyMindMapTheme, collapsedMindMapNodeIds, hiddenMindMapNodeIds, mindMapDepths, mindMapRootId, MIND_MAP_THEMES, setMindMapRoot, toggleMindMapBranch } from '../src/mindmap';
 import type { CanvasDocument } from '../src/types';
 
 const data: CanvasDocument = {
@@ -35,4 +35,16 @@ test('applies a depth-aware mind-map theme while preserving unrelated nodes', ()
   assert.equal(themed.nodes[1]?.styleAttributes?.canvasStudioMindMapDepth, 1);
   assert.equal(themed.nodes[2]?.color, undefined);
   assert.equal((themed.metadata as { canvasStudio: { mindMapTheme: string } }).canvasStudio.mindMapTheme, 'ocean');
+});
+
+test('persists branch collapse and returns only descendants as hidden', () => {
+  const tree: CanvasDocument = {
+    ...data,
+    nodes: [...data.nodes, { id: 'leaf', type: 'text', x: 400, y: 0, width: 120, height: 60 }],
+    edges: [{ id: 'e1', fromNode: 'root', toNode: 'child' }, { id: 'e2', fromNode: 'child', toNode: 'leaf' }]
+  };
+  const collapsed = toggleMindMapBranch(tree, 'root');
+  assert.deepEqual([...collapsedMindMapNodeIds(collapsed)], ['root']);
+  assert.deepEqual([...hiddenMindMapNodeIds(collapsed)], ['child', 'leaf']);
+  assert.deepEqual([...hiddenMindMapNodeIds(toggleMindMapBranch(collapsed, 'root'))], []);
 });
