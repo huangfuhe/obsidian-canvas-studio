@@ -277,6 +277,9 @@ selector for bidirectional flowchart connections.
 The 0.9.65 patch applies the same optional start/end flow roles to generated
 basic-process and decision-branch templates.
 
+The 0.9.66 patch adds flow-role readback and editing for pill-shaped nodes in
+the contextual inspector.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual

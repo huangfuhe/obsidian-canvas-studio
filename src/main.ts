@@ -714,6 +714,16 @@ export default class CanvasStudioPlugin extends Plugin {
     shape.value = typeof nodes[0]?.styleAttributes?.shape === 'string' ? nodes[0].styleAttributes.shape : '';
     shape.addEventListener('change', () => this.applyShape(shape.value || null));
 
+    if (nodes.every((node) => node.styleAttributes?.shape === 'pill')) {
+      const roleField = field('流程角色');
+      const role = roleField.createEl('select', { attr: { 'aria-label': '流程角色' } });
+      for (const [value, label] of [['', '普通节点'], ['start', '开始'], ['end', '结束']] as const) {
+        role.createEl('option', { value, text: label });
+      }
+      role.value = typeof nodes[0]?.styleAttributes?.canvasStudioFlowRole === 'string' ? nodes[0].styleAttributes.canvasStudioFlowRole : '';
+      role.addEventListener('change', () => this.applyStyle({ canvasStudioFlowRole: role.value || null }));
+    }
+
     const activeCanvas = this.currentCanvas();
     if (activeCanvas) {
       const groups = activeCanvas.getData().nodes.filter((node) => node.type === 'group');
