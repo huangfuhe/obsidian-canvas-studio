@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createBasicTextNode, createShapeNode } from '../src/basic-nodes';
+import { createBasicTextNode, createShapeNode, fittedTextNodeHeight } from '../src/basic-nodes';
 
 test('creates a native editable text card', () => {
   const node = createBasicTextNode('text-1', 'text', { x: 100, y: 200 }, 'serif', 18);
@@ -26,4 +26,10 @@ test('creates a native flowchart shape without an existing selection', () => {
   assert.equal(node.width, 340);
   assert.equal(node.height, 180);
   assert.equal(node.text, '新建形状');
+});
+
+test('fits text-node height to rendered content with a minimum', () => {
+  assert.equal(fittedTextNodeHeight(40), 80);
+  assert.equal(fittedTextNodeHeight(101.2), 118);
+  assert.equal(fittedTextNodeHeight(Number.NaN), 80);
 });

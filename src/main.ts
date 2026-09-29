@@ -47,7 +47,7 @@ import { COMPONENT_LIBRARY, componentsByCategory, filterComponents, type Compone
 import { createSavedComponent, instantiateSavedComponent, type SavedCanvasComponent } from './saved-components';
 import { filterMediaItems, mediaItemsFromPaths, type MediaKind, type MediaItem } from './media';
 import { createLinkNode, normalizeLinkUrl } from './links';
-import { createBasicTextNode, createShapeNode, type BasicShape, type BasicTextKind } from './basic-nodes';
+import { createBasicTextNode, createShapeNode, fittedTextNodeHeight, type BasicShape, type BasicTextKind } from './basic-nodes';
 import { canvasPointToClient, clientPointToCanvas, parseCssTransform } from './canvas-position';
 import { addWaypointAtLongestSegment, edgeRoutePoints, EDGE_WAYPOINTS_KEY, parseEdgeWaypoints, polylinePath, routeEdgeWithObstacles, serializeEdgeWaypoints, type EdgeWaypoint } from './edge-waypoints';
 import { addCanvasStroke, canvasStrokes, clearCanvasStrokes, removeLastCanvasStroke, removeStrokeNearPoint, type CanvasStroke, type StrokePoint } from './strokes';
@@ -178,6 +178,11 @@ export default class CanvasStudioPlugin extends Plugin {
       id: 'create-sticky-note',
       name: 'Canvas Studio: 创建便签',
       checkCallback: (checking) => this.commandAvailability(checking, () => this.insertBasicTextNode('sticky-note'))
+    });
+    this.addCommand({
+      id: 'fit-selected-text-height',
+      name: 'Canvas Studio: 适应文本节点高度',
+      checkCallback: (checking) => this.commandAvailability(checking, () => this.fitSelectedTextNodeHeights())
     });
     this.addCommand({
       id: 'create-sibling-node',
@@ -936,6 +941,10 @@ export default class CanvasStudioPlugin extends Plugin {
     lockInput.addEventListener('change', () => this.applyNodeProperties({ locked: lockInput.checked }));
 
     const footer = container.createDiv({ cls: 'canvas-studio-inspector-footer' });
+    if (nodes.some((node) => node.type === 'text')) {
+      const fitHeight = footer.createEl('button', { text: '适应文本高度' });
+      fitHeight.addEventListener('click', () => this.fitSelectedTextNodeHeights());
+    }
     const more = footer.createEl('button', { text: '更多字体设置', cls: 'mod-cta' });
     more.addEventListener('click', () => this.openStyleMenu(more));
   }
@@ -2493,6 +2502,27 @@ export default class CanvasStudioPlugin extends Plugin {
     const ids = new Set(this.selection(canvas).map((node) => node.id));
     if (ids.size === 0) return;
     replaceCanvasData(canvas, updateNodes(canvas.getData(), ids, (node) => ({ ...node, ...patch })));
+  }
+
+  private fitSelectedTextNodeHeights(): void {
+    const canvas = this.currentCanvas();
+    if (!canvas || canvas.readonly) return;
+    const heights = new Map<string, number>();
+    for (const runtimeNode of selectedRuntimeNodes(canvas)) {
+      if (runtimeNode.getData().type !== 'text') continue;
+      const content = runtimeNode.nodeEl?.querySelector('.canvas-node-content');
+      if (!(content instanceof HTMLElement)) continue;
+      heights.set(runtimeNode.id, fittedTextNodeHeight(content.scrollHeight));
+    }
+    if (heights.size === 0) {
+      new Notice('没有可测量的选中文本节点。', 2200);
+      return;
+    }
+    replaceCanvasData(canvas, updateNodes(canvas.getData(), new Set(heights.keys()), (node) => ({
+      ...node,
+      height: heights.get(node.id) ?? node.height
+    })));
+    new Notice(`已调整 ${heights.size} 个文本节点高度。`, 1600);
   }
 
   private fitSelectedGroups(): void {

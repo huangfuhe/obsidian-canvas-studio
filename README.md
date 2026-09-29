@@ -309,6 +309,9 @@ action while keeping strokes in optional Canvas Studio metadata.
 The 0.9.76 patch adds a drag-capable eraser that removes the nearest stored
 stroke without modifying Canvas nodes or edges.
 
+The 0.9.77 patch adds a rendered-content height fit action for selected text
+nodes, preserving their width and position.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual

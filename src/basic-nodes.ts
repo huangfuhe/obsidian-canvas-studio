@@ -4,6 +4,11 @@ export type BasicTextKind = 'text' | 'sticky-note';
 
 export type BasicShape = 'rectangle' | 'pill' | 'diamond' | 'parallelogram' | 'circle' | 'predefined-process' | 'document' | 'database';
 
+export function fittedTextNodeHeight(contentHeight: number, minimum = 80, chrome = 16): number {
+  if (!Number.isFinite(contentHeight) || contentHeight < 0) return minimum;
+  return Math.max(minimum, Math.ceil(contentHeight + chrome));
+}
+
 export function createBasicTextNode(
   id: string,
   kind: BasicTextKind,
