@@ -41,3 +41,14 @@ test('centers every tier around the template origin', () => {
   const maxX = Math.max(...branchNodes.map((node) => node.x + node.width));
   assert.equal((minX + maxX) / 2, 600);
 });
+
+test('marks template start and end nodes with flow roles', () => {
+  let index = 0;
+  const template = FLOW_TEMPLATES.find((item) => item.id === 'basic-process')!;
+  const canvas = instantiateFlowTemplate(template, {
+    origin: { x: 500, y: 100 },
+    idFactory: (prefix) => `${prefix}-${++index}`
+  });
+  assert.equal(canvas.nodes.find((node) => node.text === '开始')?.styleAttributes?.canvasStudioFlowRole, 'start');
+  assert.equal(canvas.nodes.find((node) => node.text === '结束')?.styleAttributes?.canvasStudioFlowRole, 'end');
+});

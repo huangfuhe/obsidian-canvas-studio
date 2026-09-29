@@ -94,6 +94,7 @@ export function instantiateFlowTemplate(
       const size = sizes[index]!;
       const id = options.idFactory('node');
       ids.set(item.key, id);
+      const flowRole = item.key === 'start' ? 'start' : item.key === 'end' || item.key === 'finish' ? 'end' : undefined;
       nodes.push({
         id,
         type: 'text',
@@ -108,7 +109,8 @@ export function instantiateFlowTemplate(
           textAlign: 'center',
           fontFamily: options.fontFamily ?? 'sans-serif',
           fontSize: options.fontSize ?? 16,
-          fontWeight: item.shape === 'pill' ? 700 : 400
+          fontWeight: item.shape === 'pill' ? 700 : 400,
+          ...(flowRole ? { canvasStudioFlowRole: flowRole } : {})
         }
       });
       x += size.width + FLOW_NODE_GAP;

@@ -274,6 +274,9 @@ inspector using optional `styleAttributes.verticalAlign`.
 The 0.9.64 patch fixes native edge arrow persistence and adds a start-arrow
 selector for bidirectional flowchart connections.
 
+The 0.9.65 patch applies the same optional start/end flow roles to generated
+basic-process and decision-branch templates.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual
