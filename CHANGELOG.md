@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.88 - 2026-09-29
+
+### Added
+
+- 文件/媒体节点属性面板增加“打开源文件”，复用 Obsidian workspace 打开 Vault 文件。
+
 ## 0.9.87 - 2026-09-29
 
 ### Added

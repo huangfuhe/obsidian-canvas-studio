@@ -824,6 +824,8 @@ export default class CanvasStudioPlugin extends Plugin {
       const mediaSummary = field('素材信息');
       mediaSummary.createDiv({ cls: 'canvas-studio-inspector-detail', text: `${kind === 'image' ? '图片' : kind === 'vector' ? 'SVG' : kind === 'pdf' ? 'PDF' : '文件'} · ${file?.file ?? ''}` });
       const mediaActions = mediaSummary.createDiv({ cls: 'canvas-studio-inspector-segmented' });
+      const openFile = mediaActions.createEl('button', { text: '打开源文件' });
+      openFile.addEventListener('click', () => this.openSelectedFileNode());
       const fitMedia = mediaActions.createEl('button', { text: '恢复默认尺寸' });
       fitMedia.addEventListener('click', () => this.resetSelectedFileSize(kind));
       if (kind === 'image' || kind === 'vector') {
@@ -2064,6 +2066,19 @@ export default class CanvasStudioPlugin extends Plugin {
       return;
     }
     replaceCanvasData(canvas, updateNodes(canvas.getData(), new Set([fileNode.id]), (node) => ({ ...node, file: normalized })));
+  }
+
+  private openSelectedFileNode(): void {
+    const canvas = this.currentCanvas();
+    if (!canvas) return;
+    const [fileNode] = this.selection(canvas).filter((node) => node.type === 'file');
+    if (!fileNode?.file) return;
+    const file = this.app.vault.getAbstractFileByPath(fileNode.file);
+    if (!(file instanceof TFile)) {
+      new Notice('Vault 中没有找到该文件。', 2500);
+      return;
+    }
+    void this.app.workspace.openLinkText(file.path, '', false);
   }
 
   private resetSelectedFileSize(kind: MediaKind | null): void {

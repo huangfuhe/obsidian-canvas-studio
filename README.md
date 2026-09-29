@@ -340,6 +340,8 @@ for selected native file nodes.
 The 0.9.87 patch adds cover/ratio/repeat background-style controls for image and
 SVG file nodes using native Canvas fields.
 
+The 0.9.88 patch adds an open-source-file action for selected native file nodes.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual
