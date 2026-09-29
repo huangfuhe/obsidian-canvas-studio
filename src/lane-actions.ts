@@ -92,3 +92,50 @@ export function moveGroupLane(
     })
   };
 }
+
+export function arrangeLanes(
+  data: CanvasDocument,
+  groupIds: ReadonlySet<string>,
+  direction: 'horizontal' | 'vertical',
+  gap = 40
+): CanvasDocument {
+  const groups = data.nodes.filter((node) => node.type === 'group' && groupIds.has(node.id));
+  if (groups.length < 2) return data;
+  const ordered = [...groups].sort((left, right) => direction === 'horizontal' ? left.x - right.x : left.y - right.y);
+  const equalHeight = Math.max(...ordered.map((group) => group.height));
+  const equalWidth = Math.max(...ordered.map((group) => group.width));
+  const originX = Math.min(...ordered.map((group) => group.x));
+  const originY = Math.min(...ordered.map((group) => group.y));
+  const placements = new Map<string, { x: number; y: number; width: number; height: number }>();
+  let cursor = direction === 'horizontal' ? originX : originY;
+  for (const group of ordered) {
+    const width = direction === 'horizontal' ? group.width : equalWidth;
+    const height = direction === 'horizontal' ? equalHeight : group.height;
+    placements.set(group.id, {
+      x: direction === 'horizontal' ? cursor : originX,
+      y: direction === 'horizontal' ? originY : cursor,
+      width,
+      height
+    });
+    cursor += (direction === 'horizontal' ? width : height) + gap;
+  }
+
+  const childMoves = new Map<string, { dx: number; dy: number }>();
+  for (const group of ordered) {
+    const placement = placements.get(group.id)!;
+    const dx = placement.x - group.x;
+    const dy = placement.y - group.y;
+    for (const child of data.nodes.filter((node) => node.type !== 'group' && contains(group, node))) {
+      childMoves.set(child.id, { dx, dy });
+    }
+  }
+  return {
+    ...data,
+    nodes: data.nodes.map((node) => {
+      const placement = placements.get(node.id);
+      if (placement) return { ...node, ...placement };
+      const move = childMoves.get(node.id);
+      return move ? { ...node, x: node.x + move.dx, y: node.y + move.dy } : node;
+    })
+  };
+}

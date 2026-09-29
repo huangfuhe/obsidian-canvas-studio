@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { duplicateGroupAsLane, moveGroupLane, removeGroupContainer } from '../src/lane-actions';
+import { arrangeLanes, duplicateGroupAsLane, moveGroupLane, removeGroupContainer } from '../src/lane-actions';
 import type { CanvasDocument } from '../src/types';
 
 test('duplicates a group as a right-hand lane with internal edges remapped', () => {
@@ -57,4 +57,24 @@ test('removes only the group container and keeps content', () => {
     edges: []
   };
   assert.deepEqual(removeGroupContainer(data, 'group').nodes, [data.nodes[1]]);
+});
+
+test('arranges selected horizontal lanes and moves their children', () => {
+  const data: CanvasDocument = {
+    nodes: [
+      { id: 'a', type: 'group', x: 0, y: 40, width: 200, height: 120 },
+      { id: 'a-child', type: 'text', x: 40, y: 80, width: 80, height: 40, text: 'A' },
+      { id: 'b', type: 'group', x: 280, y: 80, width: 240, height: 180 },
+      { id: 'b-child', type: 'text', x: 320, y: 120, width: 80, height: 40, text: 'B' }
+    ],
+    edges: []
+  };
+  const result = arrangeLanes(data, new Set(['a', 'b']), 'horizontal', 40);
+  assert.equal(result.nodes[0]?.x, 0);
+  assert.equal(result.nodes[0]?.y, 40);
+  assert.equal(result.nodes[0]?.height, 180);
+  assert.equal(result.nodes[2]?.x, 240);
+  assert.equal(result.nodes[2]?.y, 40);
+  assert.equal(result.nodes[1]?.y, 80);
+  assert.equal(result.nodes[3]?.x, 280);
 });

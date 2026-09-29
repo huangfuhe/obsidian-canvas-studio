@@ -28,7 +28,7 @@ import { moveGroupChildren } from './group-follow';
 import { fitGroupsToChildren } from './group-layout';
 import { groupNodes, resizeGroups, ungroupNodes, updateGroupProperties } from './group-actions';
 import { snapFragmentIntoGroup, snapNodeIntoGroup } from './group-snap';
-import { duplicateGroupAsLane, moveGroupLane, removeGroupContainer } from './lane-actions';
+import { arrangeLanes, duplicateGroupAsLane, moveGroupLane, removeGroupContainer } from './lane-actions';
 import { computeMindMapLayout, moveNodesToLayout } from './layout';
 import { outlineToCanvas, parseMarkdownOutline } from './outline';
 import { findCanvasMatches, replaceAllMatches, replaceCurrentMatch, type CanvasSearchMatch } from './search';
@@ -533,6 +533,12 @@ export default class CanvasStudioPlugin extends Plugin {
         right.addEventListener('click', () => this.moveSelectedLane('right'));
         const remove = layoutField.createEl('button', { text: '移除容器' });
         remove.addEventListener('click', () => this.removeSelectedLane());
+      } else if (groups.length > 1) {
+        const arrangeActions = layoutField.createDiv({ cls: 'canvas-studio-inspector-segmented' });
+        const horizontal = arrangeActions.createEl('button', { text: '水平整理泳道' });
+        horizontal.addEventListener('click', () => this.arrangeSelectedLanes('horizontal'));
+        const vertical = arrangeActions.createEl('button', { text: '垂直整理泳道' });
+        vertical.addEventListener('click', () => this.arrangeSelectedLanes('vertical'));
       }
       const fit = layoutField.createEl('button', {
         text: '按内容自适应尺寸',
@@ -1299,6 +1305,15 @@ export default class CanvasStudioPlugin extends Plugin {
     if (!group || !window.confirm('移除容器但保留内部节点和连线？')) return;
     replaceCanvasData(canvas, removeGroupContainer(canvas.getData(), group.id));
     new Notice('已移除容器，内部内容已保留。', 2000);
+  }
+
+  private arrangeSelectedLanes(direction: 'horizontal' | 'vertical'): void {
+    const canvas = this.currentCanvas();
+    if (!canvas || canvas.readonly) return;
+    const groupIds = new Set(this.selection(canvas).filter((node) => node.type === 'group').map((node) => node.id));
+    if (groupIds.size < 2) return;
+    replaceCanvasData(canvas, arrangeLanes(canvas.getData(), groupIds, direction));
+    new Notice(direction === 'horizontal' ? '已水平整理泳道。' : '已垂直整理泳道。', 1800);
   }
 
   private groupSelection(): void {

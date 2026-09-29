@@ -117,6 +117,9 @@ and edges are copied with fresh IDs while external edges remain untouched.
 The 0.9.15 development build adds left/right lane reordering and confirmed
 container removal that preserves the lane contents.
 
+The 0.9.16 development build adds horizontal and vertical batch lane arranging
+for multi-selected groups.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual
