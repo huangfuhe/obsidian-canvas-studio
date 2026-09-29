@@ -40,7 +40,7 @@ import { snapNodePosition } from './snap';
 import { instantiateSwimlane, SWIMLANE_TEMPLATES } from './swimlane';
 import { FLOW_TEMPLATES, instantiateFlowTemplate } from './templates';
 import { applyCanvasTheme, CANVAS_THEMES } from './themes';
-import { canvasGridEnabled, setCanvasGrid } from './canvas-view';
+import { canvasBackground, canvasGridEnabled, setCanvasBackground, setCanvasGrid, type CanvasBackground } from './canvas-view';
 import { COMPONENT_LIBRARY, componentsByCategory, filterComponents, type ComponentSpec } from './components';
 import { createSavedComponent, instantiateSavedComponent, type SavedCanvasComponent } from './saved-components';
 import { filterMediaItems, mediaItemsFromPaths, type MediaKind, type MediaItem } from './media';
@@ -462,6 +462,7 @@ export default class CanvasStudioPlugin extends Plugin {
       this.mountComponentDropTarget(canvas);
       this.syncCanvasThemeClass(canvas);
       this.syncCanvasGridClass(canvas);
+      this.syncCanvasBackgroundClass(canvas);
       for (const node of canvas.nodes.values()) this.applyTypography(node);
       this.updateToolbarState();
     }, 0);
@@ -793,6 +794,14 @@ export default class CanvasStudioPlugin extends Plugin {
     summary.createDiv({ text: `连线 ${data.edges.length}` });
     summary.createDiv({ text: `分区 ${data.nodes.filter((node) => node.type === 'group').length}` });
     summary.createDiv({ text: '选择对象后显示上下文属性' });
+    const backgroundField = container.createDiv({ cls: 'canvas-studio-inspector-field' });
+    backgroundField.createEl('label', { text: '画布背景' });
+    const background = backgroundField.createEl('select', { attr: { 'aria-label': '画布背景' } });
+    for (const [value, label] of [['default', '默认'], ['plain', '纯白'], ['cool', '冷灰'], ['warm', '暖白']] as const) {
+      background.createEl('option', { value, text: label });
+    }
+    background.value = canvasBackground(canvas.getData());
+    background.addEventListener('change', () => this.setCanvasBackground(background.value as CanvasBackground));
   }
 
   private unmountToolbar(): void {
@@ -800,6 +809,7 @@ export default class CanvasStudioPlugin extends Plugin {
     this.clearEdgeWaypointOverlay();
     if (this.toolbarCanvas?.wrapperEl) {
       this.toolbarCanvas.wrapperEl.classList.remove(...CANVAS_THEMES.map((theme) => theme.canvasClass));
+      this.toolbarCanvas.wrapperEl.style.removeProperty('--canvas-background');
     }
     this.toolbar?.remove();
     this.inspector?.remove();
@@ -1833,6 +1843,26 @@ export default class CanvasStudioPlugin extends Plugin {
     replaceCanvasData(canvas, setCanvasGrid(canvas.getData(), enabled));
     this.syncCanvasGridClass(canvas, enabled);
     new Notice(enabled ? '已显示画布网格。' : '已隐藏画布网格。', 1600);
+  }
+
+  private setCanvasBackground(background: CanvasBackground): void {
+    const canvas = this.currentCanvas();
+    if (!canvas || canvas.readonly) return;
+    replaceCanvasData(canvas, setCanvasBackground(canvas.getData(), background));
+    this.syncCanvasBackgroundClass(canvas, background);
+  }
+
+  private syncCanvasBackgroundClass(canvas: RuntimeCanvas, background?: CanvasBackground): void {
+    const wrapper = canvas.wrapperEl;
+    if (!wrapper) return;
+    const value = background ?? canvasBackground(canvas.getData());
+    const colors: Record<CanvasBackground, string> = {
+      default: 'var(--background-primary)',
+      plain: '#ffffff',
+      cool: '#f2f5f7',
+      warm: '#fffaf0'
+    };
+    wrapper.style.setProperty('--canvas-background', colors[value]);
   }
 
   private applyStyle(patch: CanvasStyleAttributes): void {

@@ -187,6 +187,9 @@ edges connected to deleted nodes.
 The 0.9.38 development build adds a persistent canvas grid toggle stored in
 optional Canvas Studio metadata.
 
+The 0.9.39 development build adds four local canvas background presets in the
+empty-selection inspector.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual
