@@ -25,3 +25,18 @@ export function duplicateSelection(
     }));
   return { ...data, nodes: [...data.nodes, ...nodes], edges: [...data.edges, ...edges] };
 }
+
+export function deleteSelection(
+  data: CanvasDocument,
+  nodeIds: ReadonlySet<string>,
+  edgeIds: ReadonlySet<string>
+): CanvasDocument {
+  if (nodeIds.size === 0 && edgeIds.size === 0) return data;
+  return {
+    ...data,
+    nodes: data.nodes.filter((node) => !nodeIds.has(node.id)),
+    edges: data.edges.filter((edge) => !edgeIds.has(edge.id)
+      && !nodeIds.has(edge.fromNode)
+      && !nodeIds.has(edge.toNode))
+  };
+}

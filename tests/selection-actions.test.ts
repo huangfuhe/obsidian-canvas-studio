@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { duplicateSelection } from '../src/selection-actions';
+import { deleteSelection, duplicateSelection } from '../src/selection-actions';
 import type { CanvasDocument } from '../src/types';
 
 test('duplicates selected nodes and internal edges with fresh IDs', () => {
@@ -27,4 +27,25 @@ test('duplicates selected nodes and internal edges with fresh IDs', () => {
 test('leaves data identity unchanged when no nodes are selected', () => {
   const data: CanvasDocument = { nodes: [], edges: [] };
   assert.equal(duplicateSelection(data, new Set(), () => 'id'), data);
+});
+
+test('deletes selected nodes and their connected edges', () => {
+  const data: CanvasDocument = {
+    nodes: [
+      { id: 'a', type: 'text', x: 0, y: 0, width: 100, height: 50 },
+      { id: 'b', type: 'text', x: 200, y: 0, width: 100, height: 50 }
+    ],
+    edges: [{ id: 'e', fromNode: 'a', toNode: 'b' }]
+  };
+  const result = deleteSelection(data, new Set(['a']), new Set());
+  assert.deepEqual(result.nodes.map((node) => node.id), ['b']);
+  assert.deepEqual(result.edges, []);
+});
+
+test('deletes only explicitly selected edges when no nodes are selected', () => {
+  const data: CanvasDocument = {
+    nodes: [],
+    edges: [{ id: 'e', fromNode: 'a', toNode: 'b' }, { id: 'keep', fromNode: 'b', toNode: 'c' }]
+  };
+  assert.deepEqual(deleteSelection(data, new Set(), new Set(['e'])).edges.map((edge) => edge.id), ['keep']);
 });

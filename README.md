@@ -181,6 +181,9 @@ for canvas, node, edge, and mixed selections.
 The 0.9.36 development build makes the toolbar context-aware: low-relevance
 actions are hidden from the primary row but remain available in “更多”.
 
+The 0.9.37 development build adds selection deletion with automatic cleanup of
+edges connected to deleted nodes.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual
