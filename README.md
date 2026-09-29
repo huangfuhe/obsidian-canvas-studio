@@ -342,6 +342,12 @@ SVG file nodes using native Canvas fields.
 
 The 0.9.88 patch adds an open-source-file action for selected native file nodes.
 
+The 0.9.89 patch adds toolbar-safe clearance to fit-to-view after a native
+Obsidian visual smoke exposed top-node overlap.
+
+The 0.9.90 patch applies that clearance after the host fit animation completes;
+the fix was verified with a direct X11 screenshot of a real Obsidian window.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual

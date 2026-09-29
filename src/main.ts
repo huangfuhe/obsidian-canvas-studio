@@ -49,7 +49,7 @@ import { createSavedComponent, instantiateSavedComponent, type SavedCanvasCompon
 import { classifyMediaPath, filterMediaItems, mediaItemsFromPaths, type MediaKind, type MediaItem } from './media';
 import { createLinkNode, normalizeLinkUrl } from './links';
 import { createBasicTextNode, createShapeNode, fittedTextNodeHeight, type BasicShape, type BasicTextKind } from './basic-nodes';
-import { canvasPointToClient, clientPointToCanvas, parseCssTransform } from './canvas-position';
+import { canvasPointToClient, clientPointToCanvas, parseCssTransform, viewportWithOverlayClearance } from './canvas-position';
 import { addWaypointAtLongestSegment, edgeRoutePoints, EDGE_WAYPOINTS_KEY, parseEdgeWaypoints, polylinePath, routeEdgeWithObstacles, serializeEdgeWaypoints, type EdgeWaypoint } from './edge-waypoints';
 import { addCanvasStroke, canvasStrokes, clearCanvasStrokes, removeLastCanvasStroke, removeStrokeNearPoint, type CanvasStroke, type StrokePoint } from './strokes';
 import type { CanvasDocument, CanvasEdgeData, CanvasNodeData, CanvasStyleAttributes, LayoutDirection } from './types';
@@ -325,7 +325,7 @@ export default class CanvasStudioPlugin extends Plugin {
     this.addCommand({
       id: 'zoom-to-fit',
       name: 'Canvas Studio: 缩放至全览',
-      checkCallback: (checking) => this.commandAvailability(checking, () => this.runAdvancedCommand('advanced-canvas:zoom-to-fit'))
+      checkCallback: (checking) => this.commandAvailability(checking, () => this.zoomToFitWithToolbarClearance())
     });
     this.addCommand({
       id: 'component-library',
@@ -628,7 +628,7 @@ export default class CanvasStudioPlugin extends Plugin {
       case 'info': this.openCanvasInfo(); break;
       case 'diagnostics': this.openDiagnostics(); break;
       case 'zoom-selection': this.runAdvancedCommand('advanced-canvas:zoom-to-selection'); break;
-      case 'zoom-fit': this.runAdvancedCommand('advanced-canvas:zoom-to-fit'); break;
+      case 'zoom-fit': this.zoomToFitWithToolbarClearance(); break;
       case 'copy-style': this.copyStyle(); break;
       case 'paste-style': this.pasteStyle(); break;
     }
@@ -1923,6 +1923,27 @@ export default class CanvasStudioPlugin extends Plugin {
       return;
     }
     commands.executeCommandById(commandId);
+  }
+
+  private zoomToFitWithToolbarClearance(): void {
+    const canvas = this.currentCanvas();
+    if (!canvas) return;
+    if (!canvas.zoomToFit || !canvas.setViewport || !canvas.wrapperEl) {
+      this.runAdvancedCommand('advanced-canvas:zoom-to-fit');
+      return;
+    }
+    canvas.zoomToFit();
+    window.setTimeout(() => {
+      if (canvas.tx === undefined || canvas.ty === undefined || canvas.tZoom === undefined || !canvas.wrapperEl) return;
+      const rect = canvas.wrapperEl.getBoundingClientRect();
+      const clearance = (this.toolbar?.getBoundingClientRect().height ?? 40) + 28;
+      const viewport = viewportWithOverlayClearance(
+        { x: canvas.tx, y: canvas.ty, zoom: canvas.tZoom },
+        { width: rect.width, height: rect.height },
+        clearance
+      );
+      canvas.setViewport?.(viewport.x, viewport.y, viewport.zoom);
+    }, 400);
   }
 
   private runObsidianCommand(commandId: string): void {

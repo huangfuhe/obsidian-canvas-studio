@@ -49,3 +49,20 @@ export function canvasPointToClient(
     y: rect.top + point.y * (transform.scaleY || 1)
   };
 }
+
+export function viewportWithOverlayClearance(
+  viewport: { x: number; y: number; zoom: number },
+  size: { width: number; height: number },
+  topClearance: number,
+  scale = 0.84
+): { x: number; y: number; zoom: number } {
+  const ratio = Math.min(1, Math.max(0.5, scale));
+  const linearZoom = Math.pow(2, viewport.zoom);
+  const nextZoom = viewport.zoom + Math.log2(ratio);
+  const nextLinearZoom = Math.pow(2, nextZoom);
+  return {
+    x: viewport.x,
+    y: viewport.y - Math.max(0, topClearance) / nextLinearZoom,
+    zoom: nextZoom
+  };
+}
