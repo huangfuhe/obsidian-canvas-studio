@@ -4,6 +4,7 @@ export interface CanvasSearchMatch {
   nodeId: string;
   text: string;
   index: number;
+  field?: 'label';
 }
 
 function normalized(value: string, caseSensitive: boolean): string {
@@ -19,14 +20,18 @@ export function findCanvasMatches(
   const needle = normalized(query, caseSensitive);
   const matches: CanvasSearchMatch[] = [];
   for (const node of data.nodes) {
-    if (typeof node.text !== 'string') continue;
-    const haystack = normalized(node.text, caseSensitive);
-    let fromIndex = 0;
-    while (fromIndex < haystack.length) {
-      const index = haystack.indexOf(needle, fromIndex);
-      if (index < 0) break;
-      matches.push({ nodeId: node.id, text: node.text, index });
-      fromIndex = index + Math.max(needle.length, 1);
+    const fields: Array<{ value: string; field?: 'label' }> = [];
+    if (typeof node.text === 'string') fields.push({ value: node.text });
+    if (typeof node.label === 'string') fields.push({ value: node.label, field: 'label' });
+    for (const field of fields) {
+      const haystack = normalized(field.value, caseSensitive);
+      let fromIndex = 0;
+      while (fromIndex < haystack.length) {
+        const index = haystack.indexOf(needle, fromIndex);
+        if (index < 0) break;
+        matches.push({ nodeId: node.id, text: field.value, index, ...(field.field ? { field: field.field } : {}) });
+        fromIndex = index + Math.max(needle.length, 1);
+      }
     }
   }
   return matches;
@@ -42,10 +47,12 @@ export function replaceCurrentMatch(
   return {
     ...data,
     nodes: data.nodes.map((node) => {
-      if (node.id !== match.nodeId || typeof node.text !== 'string') return node;
-      const before = node.text.slice(0, match.index);
-      const after = node.text.slice(match.index + query.length);
-      return { ...node, text: `${before}${replacement}${after}` };
+      const source = match.field === 'label' ? node.label : node.text;
+      if (node.id !== match.nodeId || typeof source !== 'string') return node;
+      const before = source.slice(0, match.index);
+      const after = source.slice(match.index + query.length);
+      const value = `${before}${replacement}${after}`;
+      return match.field === 'label' ? { ...node, label: value } : { ...node, text: value };
     })
   };
 }
@@ -60,23 +67,26 @@ export function replaceAllMatches(
   const needle = normalized(query, caseSensitive);
   let replacements = 0;
   const nodes = data.nodes.map((node) => {
-    if (typeof node.text !== 'string') return node;
-    const source = node.text;
-    const sourceNormalized = normalized(source, caseSensitive);
-    let cursor = 0;
-    let output = '';
-    while (cursor < source.length) {
-      const index = sourceNormalized.indexOf(needle, cursor);
-      if (index < 0) {
-        output += source.slice(cursor);
-        break;
+    const replaceValue = (source: string): string => {
+      const sourceNormalized = normalized(source, caseSensitive);
+      let cursor = 0;
+      let output = '';
+      while (cursor < source.length) {
+        const index = sourceNormalized.indexOf(needle, cursor);
+        if (index < 0) {
+          output += source.slice(cursor);
+          break;
+        }
+        output += source.slice(cursor, index);
+        output += replacement;
+        cursor = index + query.length;
+        replacements += 1;
       }
-      output += source.slice(cursor, index);
-      output += replacement;
-      cursor = index + query.length;
-      replacements += 1;
-    }
-    return output === source ? node : { ...node, text: output };
+      return output === source ? source : output;
+    };
+    const text = typeof node.text === 'string' ? replaceValue(node.text) : node.text;
+    const label = typeof node.label === 'string' ? replaceValue(node.label) : node.label;
+    return text === node.text && label === node.label ? node : { ...node, text, label };
   });
   return { data: { ...data, nodes }, replacements };
 }

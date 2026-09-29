@@ -157,6 +157,9 @@ so component drops work correctly in split-view canvases.
 The 0.9.28 development build adds node opacity controls to the contextual
 inspector.
 
+The 0.9.29 development build extends Canvas search and replace to group and
+swimlane titles.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual
