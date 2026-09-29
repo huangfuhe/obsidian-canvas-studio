@@ -28,7 +28,7 @@ import { moveGroupChildren } from './group-follow';
 import { fitGroupsToChildren } from './group-layout';
 import { groupNodes, resizeGroups, ungroupNodes, updateGroupProperties } from './group-actions';
 import { snapFragmentIntoGroup, snapNodeIntoGroup } from './group-snap';
-import { duplicateGroupAsLane } from './lane-actions';
+import { duplicateGroupAsLane, moveGroupLane, removeGroupContainer } from './lane-actions';
 import { computeMindMapLayout, moveNodesToLayout } from './layout';
 import { outlineToCanvas, parseMarkdownOutline } from './outline';
 import { findCanvasMatches, replaceAllMatches, replaceCurrentMatch, type CanvasSearchMatch } from './search';
@@ -526,6 +526,13 @@ export default class CanvasStudioPlugin extends Plugin {
         rightLane.addEventListener('click', () => this.duplicateSelectedLane('right'));
         const downLane = laneActions.createEl('button', { text: '复制到下方' });
         downLane.addEventListener('click', () => this.duplicateSelectedLane('down'));
+        const reorderActions = layoutField.createDiv({ cls: 'canvas-studio-inspector-segmented' });
+        const left = reorderActions.createEl('button', { text: '向左移动' });
+        left.addEventListener('click', () => this.moveSelectedLane('left'));
+        const right = reorderActions.createEl('button', { text: '向右移动' });
+        right.addEventListener('click', () => this.moveSelectedLane('right'));
+        const remove = layoutField.createEl('button', { text: '移除容器' });
+        remove.addEventListener('click', () => this.removeSelectedLane());
       }
       const fit = layoutField.createEl('button', {
         text: '按内容自适应尺寸',
@@ -1270,6 +1277,28 @@ export default class CanvasStudioPlugin extends Plugin {
     if (!group) return;
     replaceCanvasData(canvas, duplicateGroupAsLane(canvas.getData(), group.id, direction, randomId));
     new Notice(direction === 'right' ? '已复制到右侧泳道。' : '已复制到下方泳道。', 1800);
+  }
+
+  private moveSelectedLane(direction: 'left' | 'right'): void {
+    const canvas = this.currentCanvas();
+    if (!canvas || canvas.readonly) return;
+    const [group] = this.selection(canvas).filter((node) => node.type === 'group');
+    if (!group) return;
+    const nextData = moveGroupLane(canvas.getData(), group.id, direction);
+    if (nextData === canvas.getData()) {
+      new Notice(direction === 'left' ? '左侧没有可交换的泳道。' : '右侧没有可交换的泳道。', 2200);
+      return;
+    }
+    replaceCanvasData(canvas, nextData);
+  }
+
+  private removeSelectedLane(): void {
+    const canvas = this.currentCanvas();
+    if (!canvas || canvas.readonly) return;
+    const [group] = this.selection(canvas).filter((node) => node.type === 'group');
+    if (!group || !window.confirm('移除容器但保留内部节点和连线？')) return;
+    replaceCanvasData(canvas, removeGroupContainer(canvas.getData(), group.id));
+    new Notice('已移除容器，内部内容已保留。', 2000);
   }
 
   private groupSelection(): void {
