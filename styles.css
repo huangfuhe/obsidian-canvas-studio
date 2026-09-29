@@ -234,6 +234,8 @@
   --canvas-studio-line-height: normal;
   --canvas-studio-text-color: inherit;
   --canvas-studio-padding: 0px;
+  --canvas-studio-opacity: 1;
+  opacity: var(--canvas-studio-opacity);
 }
 
 .canvas-node .markdown-preview-view,

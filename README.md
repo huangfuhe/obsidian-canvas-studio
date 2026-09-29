@@ -154,6 +154,9 @@ in the actual modal renderer.
 The 0.9.27 patch resolves drag targets by the Canvas wrapper under the pointer,
 so component drops work correctly in split-view canvases.
 
+The 0.9.28 development build adds node opacity controls to the contextual
+inspector.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual

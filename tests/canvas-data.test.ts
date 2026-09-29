@@ -17,9 +17,9 @@ test('preserves unknown top-level and node fields through canvas round-trip', ()
 
 test('merges and removes style attributes without mutating the source node', () => {
   const source = { id: 'a', type: 'text' as const, x: 0, y: 0, width: 100, height: 80, styleAttributes: { fontSize: 16, shape: 'pill' } };
-  const updated = mergeNodeStyle(source, { fontSize: 20, shape: null, textAlign: 'center' });
+  const updated = mergeNodeStyle(source, { fontSize: 20, shape: null, textAlign: 'center', opacity: 0.6 });
   assert.deepEqual(source.styleAttributes, { fontSize: 16, shape: 'pill' });
-  assert.deepEqual(updated.styleAttributes, { fontSize: 20, textAlign: 'center' });
+  assert.deepEqual(updated.styleAttributes, { fontSize: 20, textAlign: 'center', opacity: 0.6 });
 });
 
 test('rejects malformed canvas nodes', () => {

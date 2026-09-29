@@ -635,6 +635,15 @@ export default class CanvasStudioPlugin extends Plugin {
     border.value = typeof nodes[0]?.styleAttributes?.border === 'string' ? nodes[0].styleAttributes.border : 'solid';
     border.addEventListener('change', () => this.applyStyle({ border: border.value }));
 
+    const opacityField = field('透明度');
+    const opacity = opacityField.createEl('select');
+    for (const [value, label] of [['1', '100%'], ['0.8', '80%'], ['0.6', '60%'], ['0.4', '40%'], ['0.2', '20%']] as const) {
+      opacity.createEl('option', { value, text: label });
+    }
+    const currentOpacity = nodes[0]?.styleAttributes?.opacity;
+    opacity.value = typeof currentOpacity === 'number' && currentOpacity >= 0 && currentOpacity <= 1 ? String(currentOpacity) : '1';
+    opacity.addEventListener('change', () => this.applyStyle({ opacity: Number(opacity.value) }));
+
     const lockField = field('节点状态');
     const lock = lockField.createEl('label', { cls: 'canvas-studio-inspector-check' });
     const lockInput = lock.createEl('input', { type: 'checkbox', attr: { 'aria-label': '锁定节点' } });
@@ -1894,7 +1903,8 @@ export default class CanvasStudioPlugin extends Plugin {
       ['--canvas-studio-font-style', style.fontStyle, ''],
       ['--canvas-studio-line-height', style.lineHeight, ''],
       ['--canvas-studio-text-color', style.textColor, ''],
-      ['--canvas-studio-padding', style.padding, 'px']
+      ['--canvas-studio-padding', style.padding, 'px'],
+      ['--canvas-studio-opacity', style.opacity, '']
     ];
     for (const [property, value, unit] of properties) {
       if (value === undefined || value === null || value === '') element.style.removeProperty(property);
@@ -1913,7 +1923,8 @@ export default class CanvasStudioPlugin extends Plugin {
       '--canvas-studio-font-style',
       '--canvas-studio-line-height',
       '--canvas-studio-text-color',
-      '--canvas-studio-padding'
+      '--canvas-studio-padding',
+      '--canvas-studio-opacity'
     ]) element.style.removeProperty(property);
     element.removeClass('canvas-studio-underlined');
   }
