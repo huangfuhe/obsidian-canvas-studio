@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { mergeEdgePresentation, mergeEdgeStyle, mergeNodeStyle, parseCanvasDocument, safeInsertionOrigin, serializeCanvasDocument } from '../src/canvas-data';
+import { edgeArrowSelection, mergeEdgePresentation, mergeEdgeStyle, mergeNodeStyle, parseCanvasDocument, safeInsertionOrigin, serializeCanvasDocument } from '../src/canvas-data';
 
 test('preserves unknown top-level and node fields through canvas round-trip', () => {
   const source = JSON.stringify({
@@ -46,6 +46,12 @@ test('clears custom arrow styling when switching back to native endpoint arrows'
   const result = mergeEdgePresentation(edge, { toEnd: 'arrow', arrow: null });
   assert.equal(result.toEnd, 'arrow');
   assert.deepEqual(result.styleAttributes, { path: 'solid' });
+});
+
+test('reads native and custom end-arrow states for the inspector', () => {
+  assert.equal(edgeArrowSelection({ id: 'a', fromNode: 'x', toNode: 'y', toEnd: 'none' }), 'none');
+  assert.equal(edgeArrowSelection({ id: 'b', fromNode: 'x', toNode: 'y', toEnd: 'arrow' }), 'arrow');
+  assert.equal(edgeArrowSelection({ id: 'c', fromNode: 'x', toNode: 'y', styleAttributes: { arrow: 'diamond' } }), 'diamond');
 });
 
 test('places imported structures outside the current canvas bounds', () => {

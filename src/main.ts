@@ -22,7 +22,7 @@ import {
   type RuntimeCanvasNode
 } from './canvas-compat';
 import { arrangeNodes, type ArrangeMode } from './arrange';
-import { alignCanvasEdges, mergeEdgePresentation, mergeEdgeStyle, mergeNodeStyle, safeInsertionOrigin, updateNodes } from './canvas-data';
+import { alignCanvasEdges, edgeArrowSelection, mergeEdgePresentation, mergeEdgeStyle, mergeNodeStyle, safeInsertionOrigin, updateNodes } from './canvas-data';
 import { connectNodes } from './edge-actions';
 import { deleteSelection, duplicateSelection } from './selection-actions';
 import { reorderNodes, type LayerAction } from './object-actions';
@@ -1000,7 +1000,7 @@ export default class CanvasStudioPlugin extends Plugin {
     arrowField.createEl('label', { text: '终点箭头' });
     const arrow = arrowField.createEl('select');
     for (const [value, label] of [['arrow', '三角箭头'], ['none', '无箭头'], ['diamond', '菱形'], ['circle', '圆形']] as const) arrow.createEl('option', { value, text: label });
-    arrow.value = typeof edges[0]?.styleAttributes?.arrow === 'string' ? edges[0].styleAttributes.arrow : 'arrow';
+    arrow.value = edges[0] ? edgeArrowSelection(edges[0]) : 'arrow';
     arrow.addEventListener('change', () => this.applyEdgeStyle({ ...(arrow.value === 'arrow' || arrow.value === 'none' ? { toEnd: arrow.value, arrow: null } : { arrow: arrow.value, toEnd: null }) }));
 
     const labelField = container.createDiv({ cls: 'canvas-studio-inspector-field' });

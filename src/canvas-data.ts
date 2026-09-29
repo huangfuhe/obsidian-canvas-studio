@@ -87,6 +87,14 @@ export function mergeEdgePresentation(
   return next;
 }
 
+export type EdgeArrowSelection = 'arrow' | 'none' | 'diamond' | 'circle';
+
+export function edgeArrowSelection(edge: CanvasEdgeData): EdgeArrowSelection {
+  const custom = edge.styleAttributes?.arrow;
+  if (custom === 'diamond' || custom === 'circle') return custom;
+  return edge.toEnd === 'none' ? 'none' : 'arrow';
+}
+
 export function updateNodes(
   data: CanvasDocument,
   nodeIds: ReadonlySet<string>,
