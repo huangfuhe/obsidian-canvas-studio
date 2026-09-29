@@ -37,3 +37,26 @@ test('uses outward edge anchors for forward and backward lane transitions', () =
   assert.deepEqual([forward.fromSide, forward.toSide], ['right', 'left']);
   assert.deepEqual([backward.fromSide, backward.toSide], ['left', 'right']);
 });
+
+test('supports row-oriented swimlanes with semantic axis metadata', () => {
+  let index = 0;
+  const template = SWIMLANE_TEMPLATES.find((candidate) => candidate.orientation === 'rows');
+  assert.ok(template);
+  const canvas = instantiateSwimlane(template, {
+    origin: { x: 100, y: 200 },
+    idFactory: (prefix) => `${prefix}-${++index}`
+  });
+  const lanes = canvas.nodes.filter((node) => node.type === 'group');
+  const steps = canvas.nodes.filter((node) => node.type === 'text');
+  assert.equal(lanes.length, 3);
+  assert.ok(lanes[0]!.x === lanes[1]!.x && lanes[1]!.x === lanes[2]!.x);
+  assert.ok(lanes[0]!.y < lanes[1]!.y && lanes[1]!.y < lanes[2]!.y);
+  assert.ok(lanes.every((lane) => lane.styleAttributes?.canvasStudioLaneAxis === 'row'));
+  for (const step of steps) {
+    assert.ok(lanes.some((lane) => step.x >= lane.x
+      && step.x + step.width <= lane.x + lane.width
+      && step.y >= lane.y
+      && step.y + step.height <= lane.y + lane.height));
+  }
+  assert.deepEqual([canvas.edges[0]?.fromSide, canvas.edges[0]?.toSide], ['bottom', 'top']);
+});

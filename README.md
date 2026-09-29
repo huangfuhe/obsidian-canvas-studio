@@ -210,6 +210,9 @@ The 0.9.44 patch also shows the same temporary obstacle-avoiding preview for
 edges explicitly set to the `自动避障` route, even before a manual waypoint is
 added.
 
+The 0.9.45 patch adds both column-oriented and row-oriented swimlane templates
+using native groups, text nodes, and edges.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual

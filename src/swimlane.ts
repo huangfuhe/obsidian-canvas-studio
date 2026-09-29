@@ -14,9 +14,12 @@ export interface SwimlaneStepSpec {
   shape?: string;
 }
 
+export type SwimlaneOrientation = 'columns' | 'rows';
+
 export interface SwimlaneSpec {
   id: string;
   name: string;
+  orientation?: SwimlaneOrientation;
   lanes: SwimlaneLaneSpec[];
   steps: SwimlaneStepSpec[];
   edges: Array<{ from: string; to: string; label?: string }>;
@@ -35,29 +38,44 @@ const LANE_PADDING = 48;
 const STEP_WIDTH = 260;
 const STEP_HEIGHT = 96;
 const STEP_GAP = 100;
+const ROW_LANE_HEIGHT = 280;
+
+const CROSS_TEAM_LANES: SwimlaneLaneSpec[] = [
+  { key: 'requester', label: '需求方', color: '5' },
+  { key: 'owner', label: '负责人', color: '4' },
+  { key: 'reviewer', label: '评审方', color: '3' }
+];
+
+const CROSS_TEAM_STEPS: SwimlaneStepSpec[] = [
+  { key: 'submit', lane: 'requester', order: 0, text: '提交需求', shape: 'parallelogram' },
+  { key: 'clarify', lane: 'owner', order: 1, text: '澄清与拆解' },
+  { key: 'review', lane: 'reviewer', order: 2, text: '方案评审', shape: 'diamond' },
+  { key: 'execute', lane: 'owner', order: 3, text: '执行与验证' },
+  { key: 'accept', lane: 'requester', order: 4, text: '验收结果', shape: 'pill' }
+];
+
+const CROSS_TEAM_EDGES: SwimlaneSpec['edges'] = [
+  { from: 'submit', to: 'clarify' },
+  { from: 'clarify', to: 'review' },
+  { from: 'review', to: 'execute', label: '通过' },
+  { from: 'execute', to: 'accept' }
+];
 
 export const SWIMLANE_TEMPLATES: SwimlaneSpec[] = [
   {
     id: 'cross-team-request',
     name: '跨团队协作泳道',
-    lanes: [
-      { key: 'requester', label: '需求方', color: '5' },
-      { key: 'owner', label: '负责人', color: '4' },
-      { key: 'reviewer', label: '评审方', color: '3' }
-    ],
-    steps: [
-      { key: 'submit', lane: 'requester', order: 0, text: '提交需求', shape: 'parallelogram' },
-      { key: 'clarify', lane: 'owner', order: 1, text: '澄清与拆解' },
-      { key: 'review', lane: 'reviewer', order: 2, text: '方案评审', shape: 'diamond' },
-      { key: 'execute', lane: 'owner', order: 3, text: '执行与验证' },
-      { key: 'accept', lane: 'requester', order: 4, text: '验收结果', shape: 'pill' }
-    ],
-    edges: [
-      { from: 'submit', to: 'clarify' },
-      { from: 'clarify', to: 'review' },
-      { from: 'review', to: 'execute', label: '通过' },
-      { from: 'execute', to: 'accept' }
-    ]
+    lanes: CROSS_TEAM_LANES,
+    steps: CROSS_TEAM_STEPS,
+    edges: CROSS_TEAM_EDGES
+  },
+  {
+    id: 'cross-team-request-rows',
+    name: '跨团队协作泳道（行式）',
+    orientation: 'rows',
+    lanes: CROSS_TEAM_LANES,
+    steps: CROSS_TEAM_STEPS,
+    edges: CROSS_TEAM_EDGES
   }
 ];
 
@@ -65,22 +83,31 @@ export function instantiateSwimlane(
   template: SwimlaneSpec,
   options: SwimlaneOptions
 ): CanvasDocument {
+  const orientation = template.orientation ?? 'columns';
   const maxOrder = Math.max(...template.steps.map((step) => step.order));
-  const laneHeight = LANE_PADDING * 2 + STEP_HEIGHT + maxOrder * (STEP_HEIGHT + STEP_GAP);
-  const laneX = new Map<string, number>();
+  const columnLaneHeight = LANE_PADDING * 2 + STEP_HEIGHT + maxOrder * (STEP_HEIGHT + STEP_GAP);
+  const rowLaneWidth = LANE_PADDING * 2 + STEP_WIDTH + maxOrder * (STEP_WIDTH + STEP_GAP);
+  const laneWidth = orientation === 'rows' ? rowLaneWidth : LANE_WIDTH;
+  const laneHeight = orientation === 'rows' ? ROW_LANE_HEIGHT : columnLaneHeight;
+  const lanePosition = new Map<string, { x: number; y: number }>();
   const laneNodes: CanvasNodeData[] = template.lanes.map((lane, index) => {
-    const x = options.origin.x + index * (LANE_WIDTH + LANE_GAP);
-    laneX.set(lane.key, x);
+    const x = options.origin.x + (orientation === 'columns' ? index * (LANE_WIDTH + LANE_GAP) : 0);
+    const y = options.origin.y + (orientation === 'rows' ? index * (ROW_LANE_HEIGHT + LANE_GAP) : 0);
+    lanePosition.set(lane.key, { x, y });
     return {
       id: options.idFactory('group'),
       type: 'group',
       x,
-      y: options.origin.y,
-      width: LANE_WIDTH,
+      y,
+      width: laneWidth,
       height: laneHeight,
       label: lane.label,
       color: lane.color,
-      styleAttributes: { border: 'solid' }
+      styleAttributes: {
+        border: 'solid',
+        canvasStudioLaneAxis: orientation === 'rows' ? 'row' : 'column',
+        canvasStudioLaneKey: lane.key
+      }
     };
   });
 
@@ -88,14 +115,19 @@ export function instantiateSwimlane(
   const stepNodes: CanvasNodeData[] = template.steps.map((step) => {
     const id = options.idFactory('node');
     stepIds.set(step.key, id);
-    const x = (laneX.get(step.lane) ?? options.origin.x) + (LANE_WIDTH - STEP_WIDTH) / 2;
-    const y = options.origin.y + LANE_PADDING + step.order * (STEP_HEIGHT + STEP_GAP);
+    const lane = lanePosition.get(step.lane) ?? options.origin;
+    const x = orientation === 'rows'
+      ? lane.x + LANE_PADDING + step.order * (STEP_WIDTH + STEP_GAP)
+      : lane.x + (LANE_WIDTH - STEP_WIDTH) / 2;
+    const y = orientation === 'rows'
+      ? lane.y + (ROW_LANE_HEIGHT - STEP_HEIGHT) / 2
+      : options.origin.y + LANE_PADDING + step.order * (STEP_HEIGHT + STEP_GAP);
     const diamond = step.shape === 'diamond';
     return {
       id,
       type: 'text',
       x: diamond ? x - 30 : x,
-      y,
+      y: orientation === 'rows' && diamond ? y - 30 : y,
       width: diamond ? STEP_WIDTH + 60 : STEP_WIDTH,
       height: diamond ? STEP_HEIGHT + 60 : STEP_HEIGHT,
       text: step.text,
@@ -117,12 +149,16 @@ export function instantiateSwimlane(
     const to = stepMap.get(edge.to)!;
     const sameLane = from.lane === to.lane;
     const forward = (laneIndex.get(from.lane) ?? 0) < (laneIndex.get(to.lane) ?? 0);
+    const forwardFrom = orientation === 'rows' ? 'bottom' : 'right';
+    const forwardTo = orientation === 'rows' ? 'top' : 'left';
+    const backwardFrom = orientation === 'rows' ? 'top' : 'left';
+    const backwardTo = orientation === 'rows' ? 'bottom' : 'right';
     return {
       id: options.idFactory('edge'),
       fromNode: stepIds.get(edge.from)!,
-      fromSide: sameLane ? 'bottom' : forward ? 'right' : 'left',
+      fromSide: sameLane ? (orientation === 'rows' ? 'right' : 'bottom') : forward ? forwardFrom : backwardFrom,
       toNode: stepIds.get(edge.to)!,
-      toSide: sameLane ? 'top' : forward ? 'left' : 'right',
+      toSide: sameLane ? (orientation === 'rows' ? 'left' : 'top') : forward ? forwardTo : backwardTo,
       toEnd: 'arrow',
       ...(edge.label ? { label: edge.label } : {}),
       styleAttributes: { pathfindingMethod: 'square' }
