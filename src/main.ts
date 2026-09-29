@@ -42,7 +42,7 @@ import { snapNodePosition } from './snap';
 import { instantiateSwimlane, SWIMLANE_TEMPLATES } from './swimlane';
 import { FLOW_TEMPLATES, instantiateFlowTemplate } from './templates';
 import { applyCanvasTheme, CANVAS_THEMES } from './themes';
-import { addTableColumn, addTableRow, insertTableColumnAfter, insertTableRowAfter, removeLastTableColumn, removeLastTableRow } from './table-actions';
+import { addTableColumn, addTableRow, insertTableColumnAfter, insertTableRowAfter, removeLastTableColumn, removeLastTableRow, removeTableColumnAtCell, removeTableRowAtCell } from './table-actions';
 import { canvasBackground, canvasGridEnabled, canvasMode, setCanvasBackground, setCanvasGrid, setCanvasMode, type CanvasBackground, type CanvasMode } from './canvas-view';
 import { COMPONENT_LIBRARY, componentsByCategory, filterComponents, type ComponentSpec } from './components';
 import { createSavedComponent, instantiateSavedComponent, type SavedCanvasComponent } from './saved-components';
@@ -787,6 +787,11 @@ export default class CanvasStudioPlugin extends Plugin {
       insertRow.addEventListener('click', () => this.insertSelectedTableDimension('row', nodes[0]!.id));
       const insertColumn = cellActions.createEl('button', { text: '右侧插入列' });
       insertColumn.addEventListener('click', () => this.insertSelectedTableDimension('column', nodes[0]!.id));
+      const removeCellActions = cellField.createDiv({ cls: 'canvas-studio-inspector-segmented' });
+      const removeRow = removeCellActions.createEl('button', { text: '删除当前行' });
+      removeRow.addEventListener('click', () => this.removeTableDimensionAtCell('row', nodes[0]!.id));
+      const removeColumn = removeCellActions.createEl('button', { text: '删除当前列' });
+      removeColumn.addEventListener('click', () => this.removeTableDimensionAtCell('column', nodes[0]!.id));
     }
     if (links.length === 1) {
       const linkField = field('链接地址');
@@ -2593,6 +2598,19 @@ export default class CanvasStudioPlugin extends Plugin {
     if (nextData === data) return;
     replaceCanvasData(canvas, nextData);
     new Notice(axis === 'row' ? '已在下方插入表格行。' : '已在右侧插入表格列。', 1600);
+  }
+
+  private removeTableDimensionAtCell(axis: 'row' | 'column', cellId: string): void {
+    const canvas = this.currentCanvas();
+    if (!canvas || canvas.readonly || !window.confirm(axis === 'row' ? '删除当前表格行？此操作可撤销。' : '删除当前表格列？此操作可撤销。')) return;
+    const data = canvas.getData();
+    const nextData = axis === 'row' ? removeTableRowAtCell(data, cellId) : removeTableColumnAtCell(data, cellId);
+    if (nextData === data) {
+      new Notice(axis === 'row' ? '表头行不能删除。' : '表格至少保留一列。', 2000);
+      return;
+    }
+    replaceCanvasData(canvas, nextData);
+    new Notice(axis === 'row' ? '已删除当前表格行。' : '已删除当前表格列。', 1600);
   }
 
   private fitSelectedGroups(): void {

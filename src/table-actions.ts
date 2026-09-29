@@ -85,11 +85,12 @@ export function addTableColumn(data: CanvasDocument, groupId: string, idFactory:
   };
 }
 
-function removeTableCells(data: CanvasDocument, group: CanvasNodeData, axis: 'row' | 'column'): CanvasDocument {
+function removeTableCells(data: CanvasDocument, group: CanvasNodeData, axis: 'row' | 'column', target: number): CanvasDocument {
   const metrics = tableMetrics(group);
   if (!metrics) return data;
   if (axis === 'row' && metrics.rows <= 1 || axis === 'column' && metrics.columns <= 1) return data;
-  const target = axis === 'row' ? metrics.rows - 1 : metrics.columns - 1;
+  const limit = axis === 'row' ? metrics.rows : metrics.columns;
+  if (!Number.isInteger(target) || target < 0 || target >= limit || axis === 'row' && target === 0) return data;
   const removedIds = new Set(data.nodes.filter((node) => {
     if (node.styleAttributes?.canvasStudioTableId !== group.id) return false;
     const index = Number(axis === 'row' ? node.styleAttributes.canvasStudioTableRow : node.styleAttributes.canvasStudioTableColumn);
@@ -97,24 +98,55 @@ function removeTableCells(data: CanvasDocument, group: CanvasNodeData, axis: 'ro
   }).map((node) => node.id));
   return {
     ...data,
-    nodes: data.nodes.filter((node) => !removedIds.has(node.id)).map((node) => node.id === group.id ? {
-      ...node,
-      ...(axis === 'row'
-        ? { height: (metrics.rows - 1) * metrics.cellHeight, styleAttributes: { ...(node.styleAttributes ?? {}), canvasStudioTableRows: metrics.rows - 1 } }
-        : { width: (metrics.columns - 1) * metrics.cellWidth, styleAttributes: { ...(node.styleAttributes ?? {}), canvasStudioTableColumns: metrics.columns - 1 } })
-    } : node),
+    nodes: data.nodes.filter((node) => !removedIds.has(node.id)).map((node) => {
+      if (node.id === group.id) return {
+        ...node,
+        ...(axis === 'row'
+          ? { height: (metrics.rows - 1) * metrics.cellHeight, styleAttributes: { ...(node.styleAttributes ?? {}), canvasStudioTableRows: metrics.rows - 1 } }
+          : { width: (metrics.columns - 1) * metrics.cellWidth, styleAttributes: { ...(node.styleAttributes ?? {}), canvasStudioTableColumns: metrics.columns - 1 } })
+      };
+      if (node.styleAttributes?.canvasStudioTableId !== group.id) return node;
+      const index = Number(axis === 'row' ? node.styleAttributes.canvasStudioTableRow : node.styleAttributes.canvasStudioTableColumn);
+      if (!Number.isFinite(index) || index <= target) return node;
+      return {
+        ...node,
+        ...(axis === 'row' ? { y: node.y - metrics.cellHeight } : { x: node.x - metrics.cellWidth }),
+        styleAttributes: {
+          ...(node.styleAttributes ?? {}),
+          ...(axis === 'row' ? { canvasStudioTableRow: index - 1 } : { canvasStudioTableColumn: index - 1 })
+        }
+      };
+    }),
     edges: data.edges.filter((edge) => !removedIds.has(edge.fromNode) && !removedIds.has(edge.toNode))
   };
 }
 
 export function removeLastTableRow(data: CanvasDocument, groupId: string): CanvasDocument {
   const group = data.nodes.find((node) => node.id === groupId && node.type === 'group');
-  return group ? removeTableCells(data, group, 'row') : data;
+  const metrics = group ? tableMetrics(group) : null;
+  return group && metrics ? removeTableCells(data, group, 'row', metrics.rows - 1) : data;
 }
 
 export function removeLastTableColumn(data: CanvasDocument, groupId: string): CanvasDocument {
   const group = data.nodes.find((node) => node.id === groupId && node.type === 'group');
-  return group ? removeTableCells(data, group, 'column') : data;
+  const metrics = group ? tableMetrics(group) : null;
+  return group && metrics ? removeTableCells(data, group, 'column', metrics.columns - 1) : data;
+}
+
+export function removeTableRowAtCell(data: CanvasDocument, cellId: string): CanvasDocument {
+  const cell = data.nodes.find((node) => node.id === cellId);
+  const groupId = cell?.styleAttributes?.canvasStudioTableId;
+  const row = Number(cell?.styleAttributes?.canvasStudioTableRow);
+  const group = typeof groupId === 'string' ? data.nodes.find((node) => node.id === groupId && node.type === 'group') : undefined;
+  return group && Number.isFinite(row) ? removeTableCells(data, group, 'row', row) : data;
+}
+
+export function removeTableColumnAtCell(data: CanvasDocument, cellId: string): CanvasDocument {
+  const cell = data.nodes.find((node) => node.id === cellId);
+  const groupId = cell?.styleAttributes?.canvasStudioTableId;
+  const column = Number(cell?.styleAttributes?.canvasStudioTableColumn);
+  const group = typeof groupId === 'string' ? data.nodes.find((node) => node.id === groupId && node.type === 'group') : undefined;
+  return group && Number.isFinite(column) ? removeTableCells(data, group, 'column', column) : data;
 }
 
 export function insertTableRowAfter(data: CanvasDocument, cellId: string, idFactory: (prefix: string) => string): CanvasDocument {

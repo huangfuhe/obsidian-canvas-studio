@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { COMPONENT_LIBRARY } from '../src/components';
-import { addTableColumn, addTableRow, insertTableColumnAfter, insertTableRowAfter, removeLastTableColumn, removeLastTableRow } from '../src/table-actions';
+import { addTableColumn, addTableRow, insertTableColumnAfter, insertTableRowAfter, removeLastTableColumn, removeLastTableRow, removeTableColumnAtCell, removeTableRowAtCell } from '../src/table-actions';
 
 test('adds rows and columns to a semantic native Canvas table', () => {
   let index = 0;
@@ -44,4 +44,21 @@ test('inserts a row and column after a selected semantic cell', () => {
   assert.equal(afterColumn.nodes[0]?.styleAttributes?.canvasStudioTableColumns, 4);
   assert.equal(afterColumn.nodes.filter((node) => node.styleAttributes?.canvasStudioTableColumn === 2).length, 5);
   assert.equal(afterColumn.nodes.find((node) => node.text === '单元格 1-3')?.styleAttributes?.canvasStudioTableColumn, 3);
+});
+
+test('removes the selected cell row or column and shifts later cells', () => {
+  let index = 0;
+  const table = COMPONENT_LIBRARY.find((component) => component.id === 'table')!;
+  const data = table.build({ x: 0, y: 0 }, (prefix) => `${prefix}-${++index}`);
+  const cell = data.nodes.find((node) => node.styleAttributes?.canvasStudioTableRow === 1 && node.styleAttributes?.canvasStudioTableColumn === 1)!;
+  const withoutRow = removeTableRowAtCell(data, cell.id);
+  assert.equal(withoutRow.nodes[0]?.styleAttributes?.canvasStudioTableRows, 3);
+  assert.equal(withoutRow.nodes.find((node) => node.text === '单元格 2-2')?.styleAttributes?.canvasStudioTableRow, 1);
+
+  const replacementCell = withoutRow.nodes.find((node) => node.styleAttributes?.canvasStudioTableRow === 1 && node.styleAttributes?.canvasStudioTableColumn === 1)!;
+  const withoutColumn = removeTableColumnAtCell(withoutRow, replacementCell.id);
+  assert.equal(withoutColumn.nodes[0]?.styleAttributes?.canvasStudioTableColumns, 2);
+  assert.equal(withoutColumn.nodes.find((node) => node.text === '单元格 2-3')?.styleAttributes?.canvasStudioTableColumn, 1);
+  const header = data.nodes.find((node) => node.styleAttributes?.canvasStudioTableRow === 0)!;
+  assert.equal(removeTableRowAtCell(data, header.id), data);
 });

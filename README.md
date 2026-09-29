@@ -328,6 +328,9 @@ with 15-degree step controls.
 
 The 0.9.83 patch adds row/column insertion after a selected semantic table cell.
 
+The 0.9.84 patch adds selected-row/column deletion with index compaction and
+header-row protection.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual
