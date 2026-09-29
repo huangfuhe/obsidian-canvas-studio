@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.31 - 2026-09-29
+
+### Added
+
+- “更多”菜单和命令面板新增缩放到选中内容、缩放至全览。
+- 复用 Advanced Canvas 原生 `zoom-to-selection` / `zoom-to-fit` 命令。
+
 ## 0.9.30 - 2026-09-29
 
 ### Added

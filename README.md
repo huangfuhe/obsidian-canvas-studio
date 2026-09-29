@@ -163,6 +163,9 @@ swimlane titles.
 The 0.9.30 development build extends search and replace to link-node URLs while
 preserving their display titles.
 
+The 0.9.31 development build adds selection zoom and fit-to-view navigation
+through Advanced Canvas.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual
