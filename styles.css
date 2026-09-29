@@ -23,6 +23,26 @@
   overflow-x: auto;
 }
 
+.canvas-studio-toolbar-context {
+  display: inline-flex;
+  align-items: center;
+  min-width: 72px;
+  height: 30px;
+  padding: 0 8px;
+  border-right: 1px solid var(--background-modifier-border);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  white-space: nowrap;
+}
+
+.canvas-studio-toolbar-context[data-context='nodes'] {
+  color: var(--text-accent);
+}
+
+.canvas-studio-toolbar-context[data-context='edges'] {
+  color: var(--color-cyan);
+}
+
 .canvas-wrapper.canvas-studio-component-drop-target {
   outline: 2px dashed var(--interactive-accent);
   outline-offset: -4px;
