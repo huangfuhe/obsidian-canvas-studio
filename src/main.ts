@@ -312,6 +312,7 @@ export default class CanvasStudioPlugin extends Plugin {
     });
 
     this.registerDomEvent(document, 'keydown', (event) => this.handleKeydown(event));
+    this.registerDomEvent(document, 'selectionchange', () => this.captureTextSelection());
     this.registerDomEvent(document, 'dragover', (event) => this.handleComponentDragOver(event));
     this.registerDomEvent(document, 'drop', (event) => this.handleComponentDrop(event));
     this.registerDomEvent(document, 'dragend', () => {
@@ -1891,20 +1892,37 @@ export default class CanvasStudioPlugin extends Plugin {
   }
 
   private captureTextSelection(): void {
-    this.pendingTextSelection = null;
     const canvas = getCurrentCanvas(this.app);
     if (!canvas) return;
     const [node] = selectedRuntimeNodes(canvas);
-    const editorState = node?.child?.editMode?.cm?.state;
+    if (!node) return;
+    const editorState = node.child?.editMode?.cm?.state;
     const range = editorState?.selection?.main;
     const sourceText = editorState?.doc?.toString();
-    if (!node?.isEditing || !range || typeof sourceText !== 'string' || range.to <= range.from) return;
-    this.pendingTextSelection = {
-      nodeId: node.id,
-      from: range.from,
-      to: range.to,
-      sourceText
+    if (range && typeof sourceText === 'string' && range.to > range.from) {
+      this.pendingTextSelection = { nodeId: node.id, from: range.from, to: range.to, sourceText };
+      return;
+    }
+
+    const content = node.nodeEl?.querySelector('.cm-content');
+    if (!node.isEditing && !editorState && !content) return;
+    const selection = window.getSelection();
+    if (!(content instanceof HTMLElement) || !selection || selection.rangeCount === 0 || selection.isCollapsed) return;
+    const domRange = selection.getRangeAt(0);
+    if (!content.contains(domRange.startContainer) || !content.contains(domRange.endContainer)) return;
+    const offset = (container: Node, offset: number): number => {
+      const measured = document.createRange();
+      measured.selectNodeContents(content);
+      measured.setEnd(container, offset);
+      return measured.toString().length;
     };
+    const from = offset(domRange.startContainer, domRange.startOffset);
+    const to = offset(domRange.endContainer, domRange.endOffset);
+    const domText = content.textContent ?? '';
+    const resolvedText = typeof sourceText === 'string' ? sourceText : domText;
+    if (to > from && to <= resolvedText.length) {
+      this.pendingTextSelection = { nodeId: node.id, from, to, sourceText: resolvedText };
+    }
   }
 
   private menuPosition(anchor: HTMLElement): { x: number; y: number } {
@@ -2039,6 +2057,7 @@ export default class CanvasStudioPlugin extends Plugin {
   private applyStyle(patch: CanvasStyleAttributes): void {
     const canvas = this.currentCanvas();
     if (!canvas) return;
+    if (!this.pendingTextSelection) this.captureTextSelection();
     const textSelection = this.pendingTextSelection;
     this.pendingTextSelection = null;
     if (textSelection) {

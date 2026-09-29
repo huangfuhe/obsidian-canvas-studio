@@ -199,6 +199,13 @@ cross-window drag operations.
 The 0.9.42 patch adds toolbar and command-palette entries for undo and redo,
 delegating to Obsidian's native editor commands.
 
+The 0.9.43 patch improves two editing paths:
+
+- manual edge waypoint previews use an orthogonal A* grid to route around
+  multiple blocking nodes;
+- selected text ranges can be recovered from CodeMirror or the native DOM
+  selection before applying font styles from the toolbar.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual

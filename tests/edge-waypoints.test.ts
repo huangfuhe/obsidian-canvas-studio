@@ -37,3 +37,31 @@ test('routes a manual segment around a blocking node without changing saved wayp
   assert.ok(result.detours > 0);
   assert.ok(result.points.some((point) => point.y < 0 || point.y > 100));
 });
+
+test('routes around multiple blocking nodes with orthogonal segments', () => {
+  const obstacles = [
+    { x: 120, y: 0, width: 80, height: 100 },
+    { x: 260, y: 0, width: 80, height: 100 }
+  ];
+  const result = routeEdgeWithObstacles([
+    { x: 0, y: 50 },
+    { x: 500, y: 50 }
+  ], obstacles, 20);
+  assert.ok(result.detours >= 2);
+  for (let index = 0; index < result.points.length - 1; index += 1) {
+    const from = result.points[index]!;
+    const to = result.points[index + 1]!;
+    assert.ok(from.x === to.x || from.y === to.y, 'route segments must be orthogonal');
+    for (const obstacle of obstacles) {
+      if (from.x === to.x) {
+        assert.ok(!(from.x > obstacle.x && from.x < obstacle.x + obstacle.width
+          && Math.min(from.y, to.y) < obstacle.y + obstacle.height
+          && Math.max(from.y, to.y) > obstacle.y));
+      } else {
+        assert.ok(!(from.y > obstacle.y && from.y < obstacle.y + obstacle.height
+          && Math.min(from.x, to.x) < obstacle.x + obstacle.width
+          && Math.max(from.x, to.x) > obstacle.x));
+      }
+    }
+  }
+});
