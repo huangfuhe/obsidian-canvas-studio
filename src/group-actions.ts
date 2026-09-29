@@ -46,3 +46,16 @@ export function ungroupNodes(data: CanvasDocument, groupIds: ReadonlySet<string>
   const nodes = data.nodes.filter((node) => !(node.type === 'group' && groupIds.has(node.id)));
   return nodes.length === data.nodes.length ? data : { ...data, nodes };
 }
+
+export function updateGroupProperties(
+  data: CanvasDocument,
+  groupIds: ReadonlySet<string>,
+  patch: Pick<CanvasNodeData, 'label' | 'color' | 'locked'>
+): CanvasDocument {
+  return {
+    ...data,
+    nodes: data.nodes.map((node) => node.type === 'group' && groupIds.has(node.id)
+      ? { ...node, ...patch }
+      : node)
+  };
+}

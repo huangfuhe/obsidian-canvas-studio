@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { groupNodes, ungroupNodes } from '../src/group-actions';
+import { groupNodes, ungroupNodes, updateGroupProperties } from '../src/group-actions';
 import type { CanvasDocument } from '../src/types';
 
 test('groups selected nodes in a native group without moving them', () => {
@@ -34,4 +34,19 @@ test('ungroups selected groups and leaves child nodes and edges intact', () => {
   const ungrouped = ungroupNodes(data, new Set(['group']));
   assert.deepEqual(ungrouped.nodes, [data.nodes[1]]);
   assert.deepEqual(ungrouped.edges, data.edges);
+});
+
+test('updates only selected group properties', () => {
+  const data: CanvasDocument = {
+    nodes: [
+      { id: 'group-a', type: 'group', x: 0, y: 0, width: 200, height: 100, label: '旧标题' },
+      { id: 'group-b', type: 'group', x: 300, y: 0, width: 200, height: 100, label: '保留' }
+    ],
+    edges: []
+  };
+  const result = updateGroupProperties(data, new Set(['group-a']), { label: '需求方', color: '5', locked: true });
+  assert.equal(result.nodes[0]?.label, '需求方');
+  assert.equal(result.nodes[0]?.color, '5');
+  assert.equal(result.nodes[0]?.locked, true);
+  assert.equal(result.nodes[1]?.label, '保留');
 });

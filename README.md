@@ -105,6 +105,9 @@ are never persisted as user waypoints.
 The 0.9.11 development build adds native group collapse and expand controls,
 delegating to Advanced Canvas when available.
 
+The 0.9.12 development build adds direct group and swimlane title editing in
+the contextual inspector.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual

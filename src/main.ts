@@ -26,7 +26,7 @@ import { alignCanvasEdges, mergeEdgeStyle, mergeNodeStyle, safeInsertionOrigin, 
 import { diagnoseCanvas, type CanvasHealthIssue } from './diagnostics';
 import { moveGroupChildren } from './group-follow';
 import { fitGroupsToChildren } from './group-layout';
-import { groupNodes, ungroupNodes } from './group-actions';
+import { groupNodes, ungroupNodes, updateGroupProperties } from './group-actions';
 import { snapFragmentIntoGroup, snapNodeIntoGroup } from './group-snap';
 import { computeMindMapLayout, moveNodesToLayout } from './layout';
 import { outlineToCanvas, parseMarkdownOutline } from './outline';
@@ -496,6 +496,13 @@ export default class CanvasStudioPlugin extends Plugin {
 
     const groups = nodes.filter((node) => node.type === 'group');
     if (groups.length > 0) {
+      const titleField = field('分组标题');
+      const title = titleField.createEl('input', {
+        type: 'text',
+        value: groups.length === 1 ? groups[0]?.label ?? '' : '',
+        attr: { placeholder: '输入分组或泳道标题', 'aria-label': '分组或泳道标题' }
+      });
+      title.addEventListener('change', () => this.applyGroupLabel(title.value));
       const layoutField = field('分组布局');
       const fit = layoutField.createEl('button', {
         text: '按内容自适应尺寸',
@@ -1215,6 +1222,14 @@ export default class CanvasStudioPlugin extends Plugin {
       collapsed: node.collapsed !== true
     })));
     new Notice('已写入分组折叠状态；启用 Advanced Canvas 后可隐藏内部节点。', 3000);
+  }
+
+  private applyGroupLabel(label: string): void {
+    const canvas = this.currentCanvas();
+    if (!canvas || canvas.readonly) return;
+    const groupIds = new Set(this.selection(canvas).filter((node) => node.type === 'group').map((node) => node.id));
+    if (groupIds.size === 0) return;
+    replaceCanvasData(canvas, updateGroupProperties(canvas.getData(), groupIds, { label: label.trim() || undefined }));
   }
 
   private groupSelection(): void {
