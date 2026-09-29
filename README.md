@@ -289,6 +289,9 @@ mind-map, and flowchart workflows.
 The 0.9.69 documentation update aligns the published test-count evidence with
 the current 101-test suite.
 
+The 0.9.70 patch surfaces the persisted canvas mode in the toolbar context
+label for faster scanning while working.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual

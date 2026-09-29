@@ -626,7 +626,10 @@ export default class CanvasStudioPlugin extends Plugin {
     const readonly = Boolean(canvas.readonly);
     const context = describeSelectionContext(selectedNodeData(canvas), selectedEdgeData(canvas));
     if (this.toolbarContext) {
-      this.toolbarContext.setText(context.count > 0 ? `${context.label} · ${context.count}` : context.label);
+      const modeLabels = { free: '自由白板', mindmap: '思维导图', flowchart: '流程图' } as const;
+      const modeLabel = modeLabels[canvasMode(canvas.getData())];
+      const contextLabel = context.count > 0 ? `${context.label} · ${context.count}` : context.label;
+      this.toolbarContext.setText(`${modeLabel} · ${contextLabel}`);
       this.toolbarContext.dataset.context = context.kind;
     }
     for (const button of this.toolbar.querySelectorAll('button')) {
