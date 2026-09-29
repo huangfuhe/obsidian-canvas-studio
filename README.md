@@ -292,6 +292,10 @@ the current 101-test suite.
 The 0.9.70 patch surfaces the persisted canvas mode in the toolbar context
 label for faster scanning while working.
 
+The 0.9.71 patch links common actions to the mode state: mind-map operations
+select mind-map mode, while shapes, edges, and flow templates select flowchart
+mode.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual

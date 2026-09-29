@@ -1424,11 +1424,11 @@ export default class CanvasStudioPlugin extends Plugin {
       toEnd: 'arrow' as const,
       styleAttributes: { pathfindingMethod: 'square' }
     };
-    replaceCanvasData(canvas, {
+    replaceCanvasData(canvas, setCanvasMode({
       ...data,
       nodes: [...data.nodes, node],
       edges: [...data.edges, edge]
-    });
+    }, 'mindmap'));
     return nodeId;
   }
 
@@ -1582,12 +1582,12 @@ export default class CanvasStudioPlugin extends Plugin {
       }
     })();
     const moved = moveNodesToLayout(data, result);
-    const nextData = {
+    const nextData = setCanvasMode({
       ...moved,
       edges: moved.edges.map((edge) => result.positions.has(edge.fromNode) && result.positions.has(edge.toNode)
         ? { ...edge, ...sides }
         : edge)
-    };
+    }, 'mindmap');
     const diagnostics = result.diagnostics.filter((item) => item.kind !== 'disconnected');
     replaceCanvasData(canvas, nextData);
     if (diagnostics.length > 0) {
@@ -2127,7 +2127,7 @@ export default class CanvasStudioPlugin extends Plugin {
       new Notice('节点已连接，或无法创建自连接。', 2200);
       return;
     }
-    replaceCanvasData(canvas, nextData);
+    replaceCanvasData(canvas, setCanvasMode(nextData, 'flowchart'));
     new Notice('已连接选中节点。', 1600);
   }
 
@@ -2221,13 +2221,14 @@ export default class CanvasStudioPlugin extends Plugin {
     return safeInsertionOrigin(canvas.getData(), center);
   }
 
-  private insertDocument(canvas: RuntimeCanvas, fragment: CanvasDocument): void {
+  private insertDocument(canvas: RuntimeCanvas, fragment: CanvasDocument, mode?: CanvasMode): void {
     const data = canvas.getData();
-    replaceCanvasData(canvas, {
+    const nextData = {
       ...data,
       nodes: [...data.nodes, ...fragment.nodes],
       edges: [...data.edges, ...fragment.edges]
-    });
+    };
+    replaceCanvasData(canvas, mode ? setCanvasMode(nextData, mode) : nextData);
     const rootId = fragment.nodes[0]?.id;
     if (rootId) window.setTimeout(() => this.focusNode(canvas, rootId), 0);
   }
@@ -2244,7 +2245,7 @@ export default class CanvasStudioPlugin extends Plugin {
         fontFamily: this.settings.defaultFontFamily,
         fontSize: this.settings.defaultFontSize
       });
-      this.insertDocument(canvas, fragment);
+      this.insertDocument(canvas, fragment, 'mindmap');
       new Notice(`已导入 ${fragment.nodes.length} 个大纲节点。`, 2500);
     } catch (error) {
       new Notice(error instanceof Error ? error.message : 'Markdown 大纲导入失败。', 4500);
@@ -2262,7 +2263,7 @@ export default class CanvasStudioPlugin extends Plugin {
       fontFamily: this.settings.defaultFontFamily,
       fontSize: this.settings.defaultFontSize
     });
-    this.insertDocument(canvas, fragment);
+    this.insertDocument(canvas, fragment, 'flowchart');
     new Notice(`已插入${template.name}模板。`, 2000);
   }
 
@@ -2277,7 +2278,7 @@ export default class CanvasStudioPlugin extends Plugin {
       fontFamily: this.settings.defaultFontFamily,
       fontSize: this.settings.defaultFontSize
     });
-    this.insertDocument(canvas, fragment);
+    this.insertDocument(canvas, fragment, 'flowchart');
     new Notice(`已插入${template.name}。`, 2000);
   }
 
@@ -2444,7 +2445,7 @@ export default class CanvasStudioPlugin extends Plugin {
       const nextNode = flowRole
         ? { ...node, styleAttributes: { ...(node.styleAttributes ?? {}), canvasStudioFlowRole: flowRole } }
         : node;
-      replaceCanvasData(canvas, { ...canvas.getData(), nodes: [...canvas.getData().nodes, nextNode] });
+      replaceCanvasData(canvas, setCanvasMode({ ...canvas.getData(), nodes: [...canvas.getData().nodes, nextNode] }, 'flowchart'));
       window.setTimeout(() => {
         this.focusNode(canvas, node.id);
         canvas.nodes.get(node.id)?.startEditing?.();
@@ -2466,7 +2467,7 @@ export default class CanvasStudioPlugin extends Plugin {
       if (shape === 'document' || shape === 'database') return { ...styled, height: Math.max(styled.height, 120) };
       return styled;
     });
-    replaceCanvasData(canvas, nextData);
+    replaceCanvasData(canvas, setCanvasMode(nextData, 'flowchart'));
     for (const id of ids) {
       const node = canvas.nodes.get(id);
       if (node) this.applyTypography(node);
