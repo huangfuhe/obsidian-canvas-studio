@@ -82,7 +82,7 @@ const TOOLBAR_ACTIONS = [
   { id: 'style', icon: 'type', label: '字体与文本样式', shortLabel: '字体' },
   { id: 'theme', icon: 'palette', label: '应用白板主题', shortLabel: '主题' },
   { id: 'search', icon: 'search', label: '搜索与替换文本', shortLabel: '搜索' },
-  { id: 'export', icon: 'download', label: '导出白板图片', shortLabel: '导出' },
+  { id: 'export', icon: 'download', label: '导出 PNG/SVG 图片', shortLabel: '导出' },
   { id: 'present', icon: 'presentation', label: '开始演示模式', shortLabel: '演示' },
   { id: 'info', icon: 'info', label: '查看画布信息', shortLabel: '信息' },
   { id: 'diagnostics', icon: 'shield-check', label: '检查白板完整性', shortLabel: '检查' },
@@ -1148,11 +1148,11 @@ export default class CanvasStudioPlugin extends Plugin {
   private openExportMenu(anchor: HTMLElement): void {
     const menu = new Menu();
     menu.addItem((item) => item
-      .setTitle('导出整张白板图片')
+      .setTitle('导出整张白板（PNG/SVG）')
       .setIcon('image-down')
       .onClick(() => (this.app as unknown as { commands: { executeCommandById(id: string): void } }).commands.executeCommandById('advanced-canvas:export-all-as-image')));
     menu.addItem((item) => item
-      .setTitle('导出选中内容图片')
+      .setTitle('导出选中内容（PNG/SVG）')
       .setIcon('scan')
       .onClick(() => (this.app as unknown as { commands: { executeCommandById(id: string): void } }).commands.executeCommandById('advanced-canvas:export-selected-as-image')));
     menu.showAtPosition(this.menuPosition(anchor));

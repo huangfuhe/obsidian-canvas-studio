@@ -123,6 +123,10 @@ for multi-selected groups.
 The 0.9.17 patch fixes built-in component visibility in the component library
 and adds component search with an empty-state message.
 
+The 0.9.18 patch labels the export menu with the PNG/SVG formats exposed by
+Advanced Canvas; PDF export is not claimed until a dedicated implementation is
+available.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual
