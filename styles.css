@@ -43,6 +43,10 @@
   color: var(--color-cyan);
 }
 
+.canvas-studio-toolbar button.canvas-studio-context-hidden {
+  display: none;
+}
+
 .canvas-wrapper.canvas-studio-component-drop-target {
   outline: 2px dashed var(--interactive-accent);
   outline-offset: -4px;

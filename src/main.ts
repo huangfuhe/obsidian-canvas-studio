@@ -25,7 +25,7 @@ import { arrangeNodes, type ArrangeMode } from './arrange';
 import { alignCanvasEdges, mergeEdgeStyle, mergeNodeStyle, safeInsertionOrigin, updateNodes } from './canvas-data';
 import { connectNodes } from './edge-actions';
 import { duplicateSelection } from './selection-actions';
-import { describeSelectionContext } from './selection-context';
+import { describeSelectionContext, isContextualActionHidden } from './selection-context';
 import { diagnoseCanvas, type CanvasHealthIssue } from './diagnostics';
 import { moveGroupChildren } from './group-follow';
 import { fitGroupsToChildren } from './group-layout';
@@ -528,6 +528,9 @@ export default class CanvasStudioPlugin extends Plugin {
     }
     for (const button of this.toolbar.querySelectorAll('button')) {
       const action = button.dataset.canvasStudioAction;
+      const contextHidden = action !== undefined && action !== 'more' && isContextualActionHidden(action, context.kind);
+      button.toggleClass('canvas-studio-context-hidden', contextHidden);
+      button.toggleAttribute('aria-hidden', contextHidden);
       button.toggleAttribute('disabled', readonly && !READONLY_TOOLBAR_ACTIONS.has((action ?? '') as ToolbarActionId | 'more'));
     }
     this.updateInspector();
@@ -1221,8 +1224,10 @@ export default class CanvasStudioPlugin extends Plugin {
   private openMoreMenu(anchor: HTMLElement): void {
     const menu = new Menu();
     const readonly = Boolean(this.toolbarCanvas?.readonly);
+    const canvas = this.toolbarCanvas;
+    const context = canvas ? describeSelectionContext(selectedNodeData(canvas), selectedEdgeData(canvas)) : { kind: 'canvas' as const, label: '整张画布', count: 0 };
     for (const action of TOOLBAR_ACTIONS) {
-      if (!SECONDARY_TOOLBAR_ACTIONS.has(action.id)) continue;
+      if (!SECONDARY_TOOLBAR_ACTIONS.has(action.id) && !isContextualActionHidden(action.id, context.kind)) continue;
       if (readonly && !READONLY_TOOLBAR_ACTIONS.has(action.id)) continue;
       menu.addItem((item) => item
         .setTitle(action.label)

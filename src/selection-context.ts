@@ -14,3 +14,14 @@ export function describeSelectionContext(nodes: CanvasNodeData[], edges: CanvasE
   if (nodes.length > 0) return { kind: 'nodes', label: nodes.length === 1 ? '单个节点' : '多个节点', count: nodes.length };
   return { kind: 'canvas', label: '整张画布', count: 0 };
 }
+
+const NODE_ONLY_ACTIONS = new Set(['create-child', 'create-sibling', 'layout', 'shape', 'style', 'copy-style', 'paste-style']);
+const EDGE_ONLY_ACTIONS = new Set(['edge']);
+const EDITING_ACTIONS = new Set(['arrange', 'shape', 'style', 'copy-style', 'paste-style', 'edge', 'create-child', 'create-sibling', 'layout']);
+
+export function isContextualActionHidden(actionId: string, kind: SelectionContextKind): boolean {
+  if (kind === 'canvas') return EDITING_ACTIONS.has(actionId);
+  if (kind === 'nodes') return EDGE_ONLY_ACTIONS.has(actionId);
+  if (kind === 'edges') return NODE_ONLY_ACTIONS.has(actionId) || actionId === 'arrange';
+  return EDITING_ACTIONS.has(actionId);
+}

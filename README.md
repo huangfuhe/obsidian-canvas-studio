@@ -178,6 +178,9 @@ file nodes.
 The 0.9.35 development build adds a live selection-context label to the toolbar
 for canvas, node, edge, and mixed selections.
 
+The 0.9.36 development build makes the toolbar context-aware: low-relevance
+actions are hidden from the primary row but remain available in “更多”.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual
