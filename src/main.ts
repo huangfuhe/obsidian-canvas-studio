@@ -40,7 +40,7 @@ import { COMPONENT_LIBRARY, componentsByCategory, type ComponentSpec } from './c
 import { createSavedComponent, instantiateSavedComponent, type SavedCanvasComponent } from './saved-components';
 import { filterMediaItems, mediaItemsFromPaths, type MediaKind, type MediaItem } from './media';
 import { clientPointToCanvas, parseCssTransform } from './canvas-position';
-import { addWaypointAtLongestSegment, edgeRoutePoints, EDGE_WAYPOINTS_KEY, parseEdgeWaypoints, polylinePath, serializeEdgeWaypoints, type EdgeWaypoint } from './edge-waypoints';
+import { addWaypointAtLongestSegment, edgeRoutePoints, EDGE_WAYPOINTS_KEY, parseEdgeWaypoints, polylinePath, routeEdgeWithObstacles, serializeEdgeWaypoints, type EdgeWaypoint } from './edge-waypoints';
 import type { CanvasDocument, CanvasEdgeData, CanvasNodeData, CanvasStyleAttributes, LayoutDirection } from './types';
 
 interface CanvasStudioSettings {
@@ -613,11 +613,15 @@ export default class CanvasStudioPlugin extends Plugin {
     this.clearEdgeWaypointOverlay();
     const nodes = new Map(target.getData().nodes.map((node) => [node.id, node]));
     const route = edgeRoutePoints(edgeData, nodes, waypoints);
+    const obstacles = target.getData().nodes
+      .filter((node) => node.type !== 'group' && node.id !== edgeData.fromNode && node.id !== edgeData.toNode)
+      .map((node) => ({ x: node.x, y: node.y, width: node.width, height: node.height }));
+    const routed = routeEdgeWithObstacles(route, obstacles);
     const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     group.setAttribute('class', 'canvas-studio-edge-waypoint-overlay');
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     path.setAttribute('class', 'canvas-studio-edge-waypoint-path');
-    path.setAttribute('d', polylinePath(route));
+    path.setAttribute('d', polylinePath(routed.points));
     group.appendChild(path);
     waypoints.forEach((point, index) => {
       const handle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');

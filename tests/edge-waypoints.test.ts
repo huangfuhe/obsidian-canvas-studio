@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { addWaypointAtLongestSegment, edgeRoutePoints, parseEdgeWaypoints, polylinePath, serializeEdgeWaypoints } from '../src/edge-waypoints';
+import { addWaypointAtLongestSegment, edgeRoutePoints, parseEdgeWaypoints, polylinePath, routeEdgeWithObstacles, serializeEdgeWaypoints } from '../src/edge-waypoints';
 import type { CanvasEdgeData, CanvasNodeData } from '../src/types';
 
 const nodes = new Map<string, CanvasNodeData>([
@@ -27,4 +27,13 @@ test('adds a waypoint to the longest route segment', () => {
   assert.deepEqual(addWaypointAtLongestSegment([{ x: 0, y: 0 }, { x: 20, y: 0 }, { x: 20, y: 100 }]), [
     { x: 0, y: 0 }, { x: 20, y: 0 }, { x: 20, y: 50 }, { x: 20, y: 100 }
   ]);
+});
+
+test('routes a manual segment around a blocking node without changing saved waypoints', () => {
+  const result = routeEdgeWithObstacles([
+    { x: 0, y: 50 },
+    { x: 300, y: 50 }
+  ], [{ x: 120, y: 0, width: 80, height: 100 }], 20);
+  assert.ok(result.detours > 0);
+  assert.ok(result.points.some((point) => point.y < 0 || point.y > 100));
 });

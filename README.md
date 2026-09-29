@@ -98,6 +98,10 @@ add a waypoint from the inspector, then drag a handle to reshape the local
 route; double-click a handle to remove it. Waypoints remain optional Canvas
 extension data and clearing them restores the Advanced Canvas route.
 
+The 0.9.10 development build adds a preview-only obstacle detour layer for
+manual routes. Detour points are recalculated from current node geometry and
+are never persisted as user waypoints.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual
