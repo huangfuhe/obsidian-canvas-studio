@@ -50,7 +50,7 @@ import { createLinkNode, normalizeLinkUrl } from './links';
 import { createBasicTextNode, createShapeNode, type BasicShape, type BasicTextKind } from './basic-nodes';
 import { canvasPointToClient, clientPointToCanvas, parseCssTransform } from './canvas-position';
 import { addWaypointAtLongestSegment, edgeRoutePoints, EDGE_WAYPOINTS_KEY, parseEdgeWaypoints, polylinePath, routeEdgeWithObstacles, serializeEdgeWaypoints, type EdgeWaypoint } from './edge-waypoints';
-import { addCanvasStroke, canvasStrokes, clearCanvasStrokes, type CanvasStroke, type StrokePoint } from './strokes';
+import { addCanvasStroke, canvasStrokes, clearCanvasStrokes, removeLastCanvasStroke, type CanvasStroke, type StrokePoint } from './strokes';
 import type { CanvasDocument, CanvasEdgeData, CanvasNodeData, CanvasStyleAttributes, LayoutDirection } from './types';
 
 interface CanvasStudioSettings {
@@ -145,6 +145,8 @@ export default class CanvasStudioPlugin extends Plugin {
   private drawingActive = false;
   private drawingPointerId: number | null = null;
   private drawingPoints: StrokePoint[] = [];
+  private drawingColor = '#4f7cff';
+  private drawingWidth = 3;
   private laneTargetNotice: HTMLElement | null = null;
 
   override async onload(): Promise<void> {
@@ -220,6 +222,11 @@ export default class CanvasStudioPlugin extends Plugin {
       id: 'clear-drawing',
       name: 'Canvas Studio: 清除手绘',
       checkCallback: (checking) => this.commandAvailability(checking, () => this.clearDrawingStrokes())
+    });
+    this.addCommand({
+      id: 'undo-last-drawing-stroke',
+      name: 'Canvas Studio: 撤销上一笔手绘',
+      checkCallback: (checking) => this.commandAvailability(checking, () => this.undoLastDrawingStroke())
     });
     this.addCommand({
       id: 'toggle-group-collapse',
@@ -1003,6 +1010,20 @@ export default class CanvasStudioPlugin extends Plugin {
     }
     background.value = canvasBackground(canvas.getData());
     background.addEventListener('change', () => this.setCanvasBackground(background.value as CanvasBackground));
+    const drawingField = container.createDiv({ cls: 'canvas-studio-inspector-field' });
+    drawingField.createEl('label', { text: '手绘笔刷' });
+    const drawingControls = drawingField.createDiv({ cls: 'canvas-studio-inspector-segmented' });
+    const drawingColor = drawingControls.createEl('input', { type: 'color', value: this.drawingColor, attr: { 'aria-label': '手绘颜色' } });
+    drawingColor.addEventListener('input', () => { this.drawingColor = drawingColor.value; });
+    const drawingWidth = drawingControls.createEl('select', { attr: { 'aria-label': '手绘粗细' } });
+    for (const value of [2, 3, 5, 8, 12]) drawingWidth.createEl('option', { value: String(value), text: `${value}px` });
+    drawingWidth.value = String(this.drawingWidth);
+    drawingWidth.addEventListener('change', () => { this.drawingWidth = Number(drawingWidth.value); });
+    const drawingActions = drawingField.createDiv({ cls: 'canvas-studio-inspector-segmented' });
+    const undoStroke = drawingActions.createEl('button', { text: '撤销上一笔' });
+    undoStroke.addEventListener('click', () => this.undoLastDrawingStroke());
+    const clearStrokes = drawingActions.createEl('button', { text: '清除全部' });
+    clearStrokes.addEventListener('click', () => this.clearDrawingStrokes());
   }
 
   private unmountToolbar(): void {
@@ -1079,8 +1100,8 @@ export default class CanvasStudioPlugin extends Plugin {
       replaceCanvasData(canvas, addCanvasStroke(canvas.getData(), {
         id: randomId('stroke'),
         points,
-        color: 'var(--interactive-accent)',
-        width: 3
+        color: this.drawingColor,
+        width: this.drawingWidth
       }));
     }
     this.renderDrawingOverlay(canvas);
@@ -1118,7 +1139,7 @@ export default class CanvasStudioPlugin extends Plugin {
       this.drawingOverlay?.appendChild(path);
     };
     for (const stroke of canvasStrokes(canvas.getData())) drawPath(stroke.points, stroke.color, stroke.width);
-    if (previewPoints) drawPath(previewPoints);
+    if (previewPoints) drawPath(previewPoints, this.drawingColor, this.drawingWidth);
   }
 
   private clearDrawingStrokes(): void {
@@ -1126,6 +1147,19 @@ export default class CanvasStudioPlugin extends Plugin {
     if (!canvas || canvas.readonly || !window.confirm('清除当前画布的所有手绘笔迹？')) return;
     replaceCanvasData(canvas, clearCanvasStrokes(canvas.getData()));
     this.renderDrawingOverlay(canvas);
+  }
+
+  private undoLastDrawingStroke(): void {
+    const canvas = this.currentCanvas();
+    if (!canvas || canvas.readonly) return;
+    const current = canvasStrokes(canvas.getData());
+    if (current.length === 0) {
+      new Notice('当前画布没有手绘笔迹。', 1800);
+      return;
+    }
+    replaceCanvasData(canvas, removeLastCanvasStroke(canvas.getData()));
+    this.renderDrawingOverlay(canvas);
+    new Notice('已撤销上一笔手绘。', 1500);
   }
 
   private refreshEdgeWaypointOverlay(canvas?: RuntimeCanvas): void {

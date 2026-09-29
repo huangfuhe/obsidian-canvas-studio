@@ -303,6 +303,9 @@ The 0.9.73 patch adds selected-text strikethrough using native Markdown markers.
 
 The 0.9.74 patch adds selected-text Markdown links through a focused URL modal.
 
+The 0.9.75 patch adds configurable drawing color/width and an undo-last-stroke
+action while keeping strokes in optional Canvas Studio metadata.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual

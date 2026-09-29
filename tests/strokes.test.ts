@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { addCanvasStroke, canvasStrokes, clearCanvasStrokes } from '../src/strokes';
+import { addCanvasStroke, canvasStrokes, clearCanvasStrokes, removeLastCanvasStroke } from '../src/strokes';
 import type { CanvasDocument } from '../src/types';
 
 test('persists strokes in optional Canvas Studio metadata', () => {
@@ -15,4 +15,11 @@ test('clears strokes without removing other metadata', () => {
   const cleared = clearCanvasStrokes(data);
   assert.deepEqual(canvasStrokes(cleared), []);
   assert.equal((cleared.metadata as Record<string, unknown>).keep, true);
+});
+
+test('removes only the latest stroke', () => {
+  const first = addCanvasStroke({ nodes: [], edges: [] }, { id: 'a', points: [{ x: 0, y: 0 }, { x: 1, y: 1 }] });
+  const second = addCanvasStroke(first, { id: 'b', points: [{ x: 2, y: 2 }, { x: 3, y: 3 }] });
+  assert.deepEqual(canvasStrokes(removeLastCanvasStroke(second)).map((stroke) => stroke.id), ['a']);
+  assert.equal(removeLastCanvasStroke({ nodes: [], edges: [] }).nodes.length, 0);
 });

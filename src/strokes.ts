@@ -51,3 +51,14 @@ export function clearCanvasStrokes(data: CanvasDocument): CanvasDocument {
     metadata: { ...metadata, canvasStudio: { ...studio, [STROKES_KEY]: [] } }
   };
 }
+
+export function removeLastCanvasStroke(data: CanvasDocument): CanvasDocument {
+  const strokes = canvasStrokes(data);
+  if (strokes.length === 0) return data;
+  const metadata = (data.metadata as Record<string, unknown> | undefined) ?? {};
+  const studio = (metadata.canvasStudio as Record<string, unknown> | undefined) ?? {};
+  return {
+    ...data,
+    metadata: { ...metadata, canvasStudio: { ...studio, [STROKES_KEY]: strokes.slice(0, -1) } }
+  };
+}
