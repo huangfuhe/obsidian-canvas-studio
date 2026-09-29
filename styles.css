@@ -139,6 +139,11 @@
   min-height: 30px;
 }
 
+.canvas-studio-inspector-segmented input {
+  min-width: 0;
+  width: 100%;
+}
+
 .canvas-studio-inspector-footer {
   display: flex;
   gap: 6px;

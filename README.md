@@ -108,6 +108,9 @@ delegating to Advanced Canvas when available.
 The 0.9.12 development build adds direct group and swimlane title editing in
 the contextual inspector.
 
+The 0.9.13 development build adds group and swimlane width/height controls in
+the same inspector, with minimum dimensions and batch editing support.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual

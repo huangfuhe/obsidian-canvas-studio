@@ -59,3 +59,18 @@ export function updateGroupProperties(
       : node)
   };
 }
+
+export function resizeGroups(
+  data: CanvasDocument,
+  groupIds: ReadonlySet<string>,
+  size: { width?: number; height?: number }
+): CanvasDocument {
+  const width = size.width === undefined ? undefined : Math.max(120, Math.round(size.width));
+  const height = size.height === undefined ? undefined : Math.max(80, Math.round(size.height));
+  return {
+    ...data,
+    nodes: data.nodes.map((node) => node.type === 'group' && groupIds.has(node.id)
+      ? { ...node, ...(width === undefined ? {} : { width }), ...(height === undefined ? {} : { height }) }
+      : node)
+  };
+}

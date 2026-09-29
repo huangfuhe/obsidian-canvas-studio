@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { groupNodes, ungroupNodes, updateGroupProperties } from '../src/group-actions';
+import { groupNodes, resizeGroups, ungroupNodes, updateGroupProperties } from '../src/group-actions';
 import type { CanvasDocument } from '../src/types';
 
 test('groups selected nodes in a native group without moving them', () => {
@@ -49,4 +49,18 @@ test('updates only selected group properties', () => {
   assert.equal(result.nodes[0]?.color, '5');
   assert.equal(result.nodes[0]?.locked, true);
   assert.equal(result.nodes[1]?.label, '保留');
+});
+
+test('resizes selected groups with minimum dimensions', () => {
+  const data: CanvasDocument = {
+    nodes: [
+      { id: 'group-a', type: 'group', x: 0, y: 0, width: 200, height: 100 },
+      { id: 'group-b', type: 'group', x: 300, y: 0, width: 200, height: 100 }
+    ],
+    edges: []
+  };
+  const result = resizeGroups(data, new Set(['group-a']), { width: 420, height: 40 });
+  assert.equal(result.nodes[0]?.width, 420);
+  assert.equal(result.nodes[0]?.height, 80);
+  assert.equal(result.nodes[1]?.width, 200);
 });

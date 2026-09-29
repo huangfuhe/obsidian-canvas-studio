@@ -26,7 +26,7 @@ import { alignCanvasEdges, mergeEdgeStyle, mergeNodeStyle, safeInsertionOrigin, 
 import { diagnoseCanvas, type CanvasHealthIssue } from './diagnostics';
 import { moveGroupChildren } from './group-follow';
 import { fitGroupsToChildren } from './group-layout';
-import { groupNodes, ungroupNodes, updateGroupProperties } from './group-actions';
+import { groupNodes, resizeGroups, ungroupNodes, updateGroupProperties } from './group-actions';
 import { snapFragmentIntoGroup, snapNodeIntoGroup } from './group-snap';
 import { computeMindMapLayout, moveNodesToLayout } from './layout';
 import { outlineToCanvas, parseMarkdownOutline } from './outline';
@@ -503,6 +503,21 @@ export default class CanvasStudioPlugin extends Plugin {
         attr: { placeholder: '输入分组或泳道标题', 'aria-label': '分组或泳道标题' }
       });
       title.addEventListener('change', () => this.applyGroupLabel(title.value));
+      const sizeField = field('分组尺寸');
+      const sizeInputs = sizeField.createDiv({ cls: 'canvas-studio-inspector-segmented' });
+      const width = sizeInputs.createEl('input', {
+        type: 'number',
+        value: groups.length === 1 ? String(groups[0]?.width ?? 0) : '',
+        attr: { min: '120', step: '10', 'aria-label': '分组宽度' }
+      });
+      const height = sizeInputs.createEl('input', {
+        type: 'number',
+        value: groups.length === 1 ? String(groups[0]?.height ?? 0) : '',
+        attr: { min: '80', step: '10', 'aria-label': '分组高度' }
+      });
+      const resize = () => this.resizeSelectedGroups(Number(width.value), Number(height.value));
+      width.addEventListener('change', resize);
+      height.addEventListener('change', resize);
       const layoutField = field('分组布局');
       const fit = layoutField.createEl('button', {
         text: '按内容自适应尺寸',
@@ -1230,6 +1245,14 @@ export default class CanvasStudioPlugin extends Plugin {
     const groupIds = new Set(this.selection(canvas).filter((node) => node.type === 'group').map((node) => node.id));
     if (groupIds.size === 0) return;
     replaceCanvasData(canvas, updateGroupProperties(canvas.getData(), groupIds, { label: label.trim() || undefined }));
+  }
+
+  private resizeSelectedGroups(width: number, height: number): void {
+    const canvas = this.currentCanvas();
+    if (!canvas || canvas.readonly || !Number.isFinite(width) || !Number.isFinite(height)) return;
+    const groupIds = new Set(this.selection(canvas).filter((node) => node.type === 'group').map((node) => node.id));
+    if (groupIds.size === 0) return;
+    replaceCanvasData(canvas, resizeGroups(canvas.getData(), groupIds, { width, height }));
   }
 
   private groupSelection(): void {
