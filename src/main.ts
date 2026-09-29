@@ -438,6 +438,20 @@ export default class CanvasStudioPlugin extends Plugin {
       this.duplicateSelectedNodes();
       return;
     }
+    if (!modifier && !event.shiftKey && !event.altKey) {
+      const key = event.key.toLocaleLowerCase();
+      if (key === 'm') {
+        event.preventDefault();
+        this.setCanvasMode('mindmap');
+        return;
+      }
+      if (key === 's') {
+        event.preventDefault();
+        const anchor = this.toolbar?.querySelector('[data-canvas-studio-action="shape"]');
+        if (anchor instanceof HTMLElement) this.openShapeMenu(anchor);
+        return;
+      }
+    }
     if (event.ctrlKey || event.metaKey || event.altKey) return;
     if (event.key === 'Delete' || event.key === 'Backspace') {
       event.preventDefault();
