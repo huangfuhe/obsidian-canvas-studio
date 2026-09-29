@@ -102,6 +102,9 @@ The 0.9.10 development build adds a preview-only obstacle detour layer for
 manual routes. Detour points are recalculated from current node geometry and
 are never persisted as user waypoints.
 
+The 0.9.11 development build adds native group collapse and expand controls,
+delegating to Advanced Canvas when available.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual

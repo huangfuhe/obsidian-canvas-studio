@@ -145,6 +145,11 @@ export default class CanvasStudioPlugin extends Plugin {
       checkCallback: (checking) => this.commandAvailability(checking, () => this.pasteStyle())
     });
     this.addCommand({
+      id: 'toggle-group-collapse',
+      name: 'Canvas Studio: 折叠/展开分组',
+      checkCallback: (checking) => this.commandAvailability(checking, () => this.toggleSelectedGroupCollapse())
+    });
+    this.addCommand({
       id: 'import-markdown-outline',
       name: 'Canvas Studio: 导入 Markdown 大纲',
       checkCallback: (checking) => this.commandAvailability(checking, () => this.openOutlineImport())
@@ -498,6 +503,13 @@ export default class CanvasStudioPlugin extends Plugin {
       });
       setTooltip(fit, '根据组内节点边界调整分组尺寸，保留节点位置', { placement: 'top' });
       fit.addEventListener('click', () => this.fitSelectedGroups());
+      if (groups.length === 1) {
+        const collapse = layoutField.createEl('button', {
+          text: groups[0]?.collapsed === true ? '展开分组' : '折叠分组',
+          cls: 'canvas-studio-inspector-action'
+        });
+        collapse.addEventListener('click', () => this.toggleSelectedGroupCollapse());
+      }
     }
 
     const colorField = field('节点颜色');
@@ -1178,7 +1190,31 @@ export default class CanvasStudioPlugin extends Plugin {
     menu.addSeparator();
     menu.addItem((item) => item.setTitle('组合选中节点').setIcon('group').onClick(() => this.groupSelection()));
     menu.addItem((item) => item.setTitle('取消组合').setIcon('ungroup').onClick(() => this.ungroupSelection()));
+    menu.addItem((item) => item.setTitle('折叠/展开分组').setIcon('chevrons-down-up').onClick(() => this.toggleSelectedGroupCollapse()));
     menu.showAtPosition(this.menuPosition(anchor));
+  }
+
+  private toggleSelectedGroupCollapse(): void {
+    const canvas = this.currentCanvas();
+    if (!canvas || canvas.readonly) return;
+    const groups = this.selection(canvas).filter((node) => node.type === 'group');
+    if (groups.length !== 1) {
+      new Notice('请选择一个分组后再折叠或展开。', 2500);
+      return;
+    }
+    const commands = (this.app as unknown as { commands?: { commands?: Record<string, unknown>; executeCommandById?: (id: string) => boolean } }).commands;
+    const commandId = 'advanced-canvas:toggle-collapse-group';
+    if (commands?.commands?.[commandId] && commands.executeCommandById) {
+      commands.executeCommandById(commandId);
+      return;
+    }
+    const group = groups[0];
+    if (!group) return;
+    replaceCanvasData(canvas, updateNodes(canvas.getData(), new Set([group.id]), (node) => ({
+      ...node,
+      collapsed: node.collapsed !== true
+    })));
+    new Notice('已写入分组折叠状态；启用 Advanced Canvas 后可隐藏内部节点。', 3000);
   }
 
   private groupSelection(): void {

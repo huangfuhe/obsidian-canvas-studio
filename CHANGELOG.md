@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.11 - 2026-09-29
+
+### Added
+
+- 分组属性和排版菜单支持折叠/展开分组。
+- Advanced Canvas 启用时委托其原生 `collapsed`/`collapsedData` 处理，未启用时保留字段降级。
+
 ## 0.9.10 - 2026-09-29
 
 ### Added
