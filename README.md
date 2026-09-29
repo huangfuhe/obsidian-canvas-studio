@@ -111,6 +111,9 @@ the contextual inspector.
 The 0.9.13 development build adds group and swimlane width/height controls in
 the same inspector, with minimum dimensions and batch editing support.
 
+The 0.9.14 development build adds right/below lane duplication. Internal nodes
+and edges are copied with fresh IDs while external edges remain untouched.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual

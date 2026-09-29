@@ -28,6 +28,7 @@ import { moveGroupChildren } from './group-follow';
 import { fitGroupsToChildren } from './group-layout';
 import { groupNodes, resizeGroups, ungroupNodes, updateGroupProperties } from './group-actions';
 import { snapFragmentIntoGroup, snapNodeIntoGroup } from './group-snap';
+import { duplicateGroupAsLane } from './lane-actions';
 import { computeMindMapLayout, moveNodesToLayout } from './layout';
 import { outlineToCanvas, parseMarkdownOutline } from './outline';
 import { findCanvasMatches, replaceAllMatches, replaceCurrentMatch, type CanvasSearchMatch } from './search';
@@ -519,6 +520,13 @@ export default class CanvasStudioPlugin extends Plugin {
       width.addEventListener('change', resize);
       height.addEventListener('change', resize);
       const layoutField = field('分组布局');
+      if (groups.length === 1) {
+        const laneActions = layoutField.createDiv({ cls: 'canvas-studio-inspector-segmented' });
+        const rightLane = laneActions.createEl('button', { text: '复制到右侧' });
+        rightLane.addEventListener('click', () => this.duplicateSelectedLane('right'));
+        const downLane = laneActions.createEl('button', { text: '复制到下方' });
+        downLane.addEventListener('click', () => this.duplicateSelectedLane('down'));
+      }
       const fit = layoutField.createEl('button', {
         text: '按内容自适应尺寸',
         cls: 'canvas-studio-inspector-action'
@@ -1253,6 +1261,15 @@ export default class CanvasStudioPlugin extends Plugin {
     const groupIds = new Set(this.selection(canvas).filter((node) => node.type === 'group').map((node) => node.id));
     if (groupIds.size === 0) return;
     replaceCanvasData(canvas, resizeGroups(canvas.getData(), groupIds, { width, height }));
+  }
+
+  private duplicateSelectedLane(direction: 'right' | 'down'): void {
+    const canvas = this.currentCanvas();
+    if (!canvas || canvas.readonly) return;
+    const [group] = this.selection(canvas).filter((node) => node.type === 'group');
+    if (!group) return;
+    replaceCanvasData(canvas, duplicateGroupAsLane(canvas.getData(), group.id, direction, randomId));
+    new Notice(direction === 'right' ? '已复制到右侧泳道。' : '已复制到下方泳道。', 1800);
   }
 
   private groupSelection(): void {
