@@ -92,16 +92,18 @@ const TOOLBAR_ACTIONS = [
   { id: 'present', icon: 'presentation', label: '开始演示模式', shortLabel: '演示' },
   { id: 'info', icon: 'info', label: '查看画布信息', shortLabel: '信息' },
   { id: 'diagnostics', icon: 'shield-check', label: '检查白板完整性', shortLabel: '检查' },
+  { id: 'zoom-selection', icon: 'scan-search', label: '缩放到选中内容', shortLabel: '选区' },
+  { id: 'zoom-fit', icon: 'maximize-2', label: '缩放至全览', shortLabel: '全览' },
   { id: 'copy-style', icon: 'paintbrush', label: '复制节点格式', shortLabel: '复制' },
   { id: 'paste-style', icon: 'paintbrush-2', label: '粘贴节点格式', shortLabel: '粘贴' }
 ] as const;
 
 type ToolbarActionId = typeof TOOLBAR_ACTIONS[number]['id'];
 const SECONDARY_TOOLBAR_ACTIONS = new Set<ToolbarActionId>([
-  'theme', 'search', 'export', 'present', 'info', 'diagnostics', 'copy-style', 'paste-style'
+  'theme', 'search', 'export', 'present', 'info', 'diagnostics', 'zoom-selection', 'zoom-fit', 'copy-style', 'paste-style'
 ]);
 const READONLY_TOOLBAR_ACTIONS = new Set<ToolbarActionId | 'more'>([
-  'search', 'export', 'present', 'info', 'diagnostics', 'more'
+  'search', 'export', 'present', 'info', 'diagnostics', 'zoom-selection', 'zoom-fit', 'more'
 ]);
 const COMPONENT_MIME = 'application/x-canvas-studio-component';
 
@@ -227,6 +229,16 @@ export default class CanvasStudioPlugin extends Plugin {
         if (!checking) this.openDiagnostics();
         return true;
       }
+    });
+    this.addCommand({
+      id: 'zoom-to-selection',
+      name: 'Canvas Studio: 缩放到选中内容',
+      checkCallback: (checking) => this.commandAvailability(checking, () => this.runAdvancedCommand('advanced-canvas:zoom-to-selection'))
+    });
+    this.addCommand({
+      id: 'zoom-to-fit',
+      name: 'Canvas Studio: 缩放至全览',
+      checkCallback: (checking) => this.commandAvailability(checking, () => this.runAdvancedCommand('advanced-canvas:zoom-to-fit'))
     });
     this.addCommand({
       id: 'component-library',
@@ -460,6 +472,8 @@ export default class CanvasStudioPlugin extends Plugin {
       case 'present': this.runAdvancedCommand('advanced-canvas:start-presentation'); break;
       case 'info': this.openCanvasInfo(); break;
       case 'diagnostics': this.openDiagnostics(); break;
+      case 'zoom-selection': this.runAdvancedCommand('advanced-canvas:zoom-to-selection'); break;
+      case 'zoom-fit': this.runAdvancedCommand('advanced-canvas:zoom-to-fit'); break;
       case 'copy-style': this.copyStyle(); break;
       case 'paste-style': this.pasteStyle(); break;
     }
