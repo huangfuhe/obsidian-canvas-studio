@@ -60,6 +60,31 @@ export function removeGroupContainer(data: CanvasDocument, groupId: string): Can
   return { ...data, nodes: data.nodes.filter((node) => node.id !== groupId) };
 }
 
+export function moveNodesIntoGroup(
+  data: CanvasDocument,
+  groupId: string,
+  nodeIds: ReadonlySet<string>,
+  padding = 16
+): CanvasDocument {
+  const group = data.nodes.find((node) => node.type === 'group' && node.id === groupId);
+  const selected = data.nodes.filter((node) => node.id !== groupId && node.type !== 'group' && nodeIds.has(node.id));
+  if (!group || selected.length === 0) return data;
+  const bounds = selected.reduce((result, node) => ({
+    minX: Math.min(result.minX, node.x),
+    minY: Math.min(result.minY, node.y),
+    maxX: Math.max(result.maxX, node.x + node.width),
+    maxY: Math.max(result.maxY, node.y + node.height)
+  }), { minX: Number.POSITIVE_INFINITY, minY: Number.POSITIVE_INFINITY, maxX: Number.NEGATIVE_INFINITY, maxY: Number.NEGATIVE_INFINITY });
+  const dx = group.x + padding - bounds.minX;
+  const dy = group.y + padding - bounds.minY;
+  return {
+    ...data,
+    nodes: data.nodes.map((node) => nodeIds.has(node.id) && node.type !== 'group'
+      ? { ...node, x: node.x + dx, y: node.y + dy }
+      : node)
+  };
+}
+
 export function moveGroupLane(
   data: CanvasDocument,
   groupId: string,

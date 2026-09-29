@@ -31,7 +31,7 @@ import { moveGroupChildren } from './group-follow';
 import { fitGroupsToChildren } from './group-layout';
 import { groupNodes, resizeGroups, ungroupNodes, updateGroupProperties } from './group-actions';
 import { snapFragmentIntoGroup, snapNodeIntoGroup } from './group-snap';
-import { arrangeLanes, duplicateGroupAsLane, moveGroupLane, removeGroupContainer, setLaneAxis, type LaneAxis } from './lane-actions';
+import { arrangeLanes, duplicateGroupAsLane, moveGroupLane, moveNodesIntoGroup, removeGroupContainer, setLaneAxis, type LaneAxis } from './lane-actions';
 import { computeMindMapLayout, moveNodesToLayout } from './layout';
 import { outlineToCanvas, parseMarkdownOutline } from './outline';
 import { findCanvasMatches, replaceAllMatches, replaceCurrentMatch, type CanvasSearchMatch } from './search';
@@ -715,6 +715,14 @@ export default class CanvasStudioPlugin extends Plugin {
       const currentAxis = groups[0]?.styleAttributes?.canvasStudioLaneAxis;
       axis.value = currentAxis === 'row' ? 'row' : 'column';
       axis.addEventListener('change', () => this.setSelectedLaneAxis(axis.value as LaneAxis));
+      const movableNodes = nodes.filter((node) => node.type !== 'group');
+      if (groups.length === 1 && movableNodes.length > 0) {
+        const adopt = layoutField.createEl('button', {
+          text: '将选中节点移入此泳道',
+          cls: 'canvas-studio-inspector-action'
+        });
+        adopt.addEventListener('click', () => this.moveSelectedNodesIntoLane(groups[0]!.id));
+      }
       if (groups.length === 1) {
         const laneActions = layoutField.createDiv({ cls: 'canvas-studio-inspector-segmented' });
         const rightLane = laneActions.createEl('button', { text: '复制到右侧' });
@@ -1765,6 +1773,15 @@ export default class CanvasStudioPlugin extends Plugin {
     if (ids.size === 0) return;
     replaceCanvasData(canvas, setLaneAxis(canvas.getData(), ids, axis));
     new Notice(axis === 'row' ? '已切换为行式泳道。' : '已切换为列式泳道。', 1800);
+  }
+
+  private moveSelectedNodesIntoLane(groupId: string): void {
+    const canvas = this.currentCanvas();
+    if (!canvas || canvas.readonly) return;
+    const nodeIds = new Set(this.selection(canvas).filter((node) => node.type !== 'group').map((node) => node.id));
+    if (nodeIds.size === 0) return;
+    replaceCanvasData(canvas, moveNodesIntoGroup(canvas.getData(), groupId, nodeIds));
+    new Notice(`已将 ${nodeIds.size} 个节点移入泳道。`, 1800);
   }
 
   private groupSelection(): void {

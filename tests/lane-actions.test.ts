@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { arrangeLanes, duplicateGroupAsLane, moveGroupLane, removeGroupContainer, setLaneAxis } from '../src/lane-actions';
+import { arrangeLanes, duplicateGroupAsLane, moveGroupLane, moveNodesIntoGroup, removeGroupContainer, setLaneAxis } from '../src/lane-actions';
 import type { CanvasDocument } from '../src/types';
 
 test('duplicates a group as a right-hand lane with internal edges remapped', () => {
@@ -100,4 +100,20 @@ test('switches selected lanes to row axis and keeps children with their groups',
   assert.equal(result.nodes[1]?.y, 40);
   assert.equal(result.nodes[3]?.x, 40);
   assert.equal(result.nodes[3]?.y, 230);
+});
+
+test('moves selected nodes into a target lane while preserving their relative layout', () => {
+  const data: CanvasDocument = {
+    nodes: [
+      { id: 'lane', type: 'group', x: 100, y: 100, width: 300, height: 240 },
+      { id: 'a', type: 'text', x: 500, y: 350, width: 80, height: 40, text: 'A' },
+      { id: 'b', type: 'text', x: 620, y: 430, width: 80, height: 40, text: 'B' }
+    ],
+    edges: []
+  };
+  const result = moveNodesIntoGroup(data, 'lane', new Set(['a', 'b']));
+  assert.equal(result.nodes[1]?.x, 116);
+  assert.equal(result.nodes[1]?.y, 116);
+  assert.equal(result.nodes[2]?.x, 236);
+  assert.equal(result.nodes[2]?.y, 196);
 });
