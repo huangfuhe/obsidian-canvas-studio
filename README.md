@@ -286,6 +286,9 @@ to native triangle or no-arrow endpoints.
 The 0.9.68 patch adds a persistent canvas-mode selector for free whiteboard,
 mind-map, and flowchart workflows.
 
+The 0.9.69 documentation update aligns the published test-count evidence with
+the current 101-test suite.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual
