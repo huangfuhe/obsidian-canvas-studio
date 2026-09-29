@@ -234,6 +234,9 @@ its contained nodes/edges, while keeping container removal content-preserving.
 The 0.9.52 patch records optional `canvasStudioLaneId` membership on nodes
 moved into or copied with a swimlane.
 
+The 0.9.53 patch adds a direct swimlane-membership selector for selected nodes,
+so reassignment does not require selecting the target group at the same time.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual

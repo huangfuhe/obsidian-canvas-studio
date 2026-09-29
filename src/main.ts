@@ -661,6 +661,21 @@ export default class CanvasStudioPlugin extends Plugin {
     shape.addEventListener('change', () => this.applyShape(shape.value || null));
 
     const activeCanvas = this.currentCanvas();
+    if (activeCanvas) {
+      const groups = activeCanvas.getData().nodes.filter((node) => node.type === 'group');
+      const movableNodes = nodes.filter((node) => node.type !== 'group');
+      if (groups.length > 0 && movableNodes.length > 0) {
+        const laneField = field('泳道归属');
+        const lane = laneField.createEl('select', { attr: { 'aria-label': '泳道归属' } });
+        lane.createEl('option', { value: '', text: '选择目标泳道' });
+        for (const group of groups) lane.createEl('option', { value: group.id, text: group.label ?? group.id });
+        const memberships = new Set(movableNodes.map((node) => node.styleAttributes?.canvasStudioLaneId).filter((value): value is string => typeof value === 'string'));
+        if (memberships.size === 1) lane.value = [...memberships][0] ?? '';
+        lane.addEventListener('change', () => {
+          if (lane.value) this.assignSelectedNodesToLane(lane.value);
+        });
+      }
+    }
     if (nodes.length === 1 && activeCanvas) {
       const mindMapField = field('思维导图');
       const rootId = mindMapRootId(activeCanvas.getData());
@@ -1857,6 +1872,15 @@ export default class CanvasStudioPlugin extends Plugin {
     if (nodeIds.size === 0) return;
     replaceCanvasData(canvas, moveNodesIntoGroup(canvas.getData(), groupId, nodeIds));
     new Notice(`已将 ${nodeIds.size} 个节点移入泳道。`, 1800);
+  }
+
+  private assignSelectedNodesToLane(groupId: string): void {
+    const canvas = this.currentCanvas();
+    if (!canvas || canvas.readonly) return;
+    const nodeIds = new Set(this.selection(canvas).filter((node) => node.type !== 'group').map((node) => node.id));
+    if (nodeIds.size === 0) return;
+    replaceCanvasData(canvas, moveNodesIntoGroup(canvas.getData(), groupId, nodeIds));
+    new Notice(`已更新 ${nodeIds.size} 个节点的泳道归属。`, 1800);
   }
 
   private reorderSelectedNodes(action: LayerAction): void {
