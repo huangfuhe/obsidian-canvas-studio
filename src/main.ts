@@ -32,7 +32,7 @@ import { moveGroupChildren } from './group-follow';
 import { fitGroupsToChildren } from './group-layout';
 import { groupNodes, resizeGroups, ungroupNodes, updateGroupProperties } from './group-actions';
 import { snapFragmentIntoGroup, snapNodeIntoGroup } from './group-snap';
-import { addEmptyLane, arrangeLanes, duplicateGroupAsLane, moveGroupLane, moveNodesIntoGroup, removeGroupContainer, setLaneAxis, type LaneAxis } from './lane-actions';
+import { addEmptyLane, arrangeLanes, deleteGroupWithContents, duplicateGroupAsLane, moveGroupLane, moveNodesIntoGroup, removeGroupContainer, setLaneAxis, type LaneAxis } from './lane-actions';
 import { computeMindMapLayout, moveNodesToLayout } from './layout';
 import { outlineToCanvas, parseMarkdownOutline } from './outline';
 import { findCanvasMatches, replaceAllMatches, replaceCurrentMatch, type CanvasSearchMatch } from './search';
@@ -756,8 +756,10 @@ export default class CanvasStudioPlugin extends Plugin {
         left.addEventListener('click', () => this.moveSelectedLane('left'));
         const right = reorderActions.createEl('button', { text: '向右移动' });
         right.addEventListener('click', () => this.moveSelectedLane('right'));
-        const remove = layoutField.createEl('button', { text: '移除容器' });
+        const remove = layoutField.createEl('button', { text: '移除容器（保留内容）' });
         remove.addEventListener('click', () => this.removeSelectedLane());
+        const removeAll = layoutField.createEl('button', { text: '删除泳道及内容' });
+        removeAll.addEventListener('click', () => this.deleteSelectedLaneWithContents());
       } else if (groups.length > 1) {
         const arrangeActions = layoutField.createDiv({ cls: 'canvas-studio-inspector-segmented' });
         const horizontal = arrangeActions.createEl('button', { text: '水平整理泳道' });
@@ -1819,6 +1821,15 @@ export default class CanvasStudioPlugin extends Plugin {
     if (!group || !window.confirm('移除容器但保留内部节点和连线？')) return;
     replaceCanvasData(canvas, removeGroupContainer(canvas.getData(), group.id));
     new Notice('已移除容器，内部内容已保留。', 2000);
+  }
+
+  private deleteSelectedLaneWithContents(): void {
+    const canvas = this.currentCanvas();
+    if (!canvas || canvas.readonly) return;
+    const [group] = this.selection(canvas).filter((node) => node.type === 'group');
+    if (!group || !window.confirm('删除泳道及其内部节点、连线？此操作可通过撤销恢复。')) return;
+    replaceCanvasData(canvas, deleteGroupWithContents(canvas.getData(), group.id));
+    new Notice('已删除泳道及其内部内容。', 2000);
   }
 
   private arrangeSelectedLanes(direction: 'horizontal' | 'vertical'): void {

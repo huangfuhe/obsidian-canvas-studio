@@ -82,6 +82,19 @@ export function removeGroupContainer(data: CanvasDocument, groupId: string): Can
   return { ...data, nodes: data.nodes.filter((node) => node.id !== groupId) };
 }
 
+export function deleteGroupWithContents(data: CanvasDocument, groupId: string): CanvasDocument {
+  const group = data.nodes.find((node) => node.type === 'group' && node.id === groupId);
+  if (!group) return data;
+  const deletedIds = new Set([groupId, ...data.nodes
+    .filter((node) => node.id !== groupId && contains(group, node))
+    .map((node) => node.id)]);
+  return {
+    ...data,
+    nodes: data.nodes.filter((node) => !deletedIds.has(node.id)),
+    edges: data.edges.filter((edge) => !deletedIds.has(edge.fromNode) && !deletedIds.has(edge.toNode))
+  };
+}
+
 export function moveNodesIntoGroup(
   data: CanvasDocument,
   groupId: string,

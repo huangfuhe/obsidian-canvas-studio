@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { addEmptyLane, arrangeLanes, duplicateGroupAsLane, moveGroupLane, moveNodesIntoGroup, removeGroupContainer, setLaneAxis } from '../src/lane-actions';
+import { addEmptyLane, arrangeLanes, deleteGroupWithContents, duplicateGroupAsLane, moveGroupLane, moveNodesIntoGroup, removeGroupContainer, setLaneAxis } from '../src/lane-actions';
 import type { CanvasDocument } from '../src/types';
 
 test('duplicates a group as a right-hand lane with internal edges remapped', () => {
@@ -132,4 +132,23 @@ test('adds an empty lane beside the source without copying its contents', () => 
     id: 'group-2', type: 'group', x: 280, y: 0, width: 240, height: 160, label: '需求方 2',
     styleAttributes: { canvasStudioLaneAxis: 'column' }
   });
+});
+
+test('deletes a lane, its contained nodes, and connected edges while preserving outside content', () => {
+  const data: CanvasDocument = {
+    nodes: [
+      { id: 'lane', type: 'group', x: 0, y: 0, width: 240, height: 160 },
+      { id: 'inside-a', type: 'text', x: 40, y: 50, width: 80, height: 40, text: 'A' },
+      { id: 'inside-b', type: 'text', x: 140, y: 80, width: 80, height: 40, text: 'B' },
+      { id: 'outside', type: 'text', x: 400, y: 50, width: 80, height: 40, text: '外部' }
+    ],
+    edges: [
+      { id: 'internal', fromNode: 'inside-a', toNode: 'inside-b' },
+      { id: 'crossing', fromNode: 'inside-a', toNode: 'outside' },
+      { id: 'outside-edge', fromNode: 'outside', toNode: 'outside' }
+    ]
+  };
+  const result = deleteGroupWithContents(data, 'lane');
+  assert.deepEqual(result.nodes.map((node) => node.id), ['outside']);
+  assert.deepEqual(result.edges.map((edge) => edge.id), ['outside-edge']);
 });
