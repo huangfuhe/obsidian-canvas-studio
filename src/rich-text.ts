@@ -48,3 +48,23 @@ export function markdownTextSelection(
   if (from < 0 || to <= from || to > sourceText.length) return null;
   return `${sourceText.slice(0, from)}${marker}${sourceText.slice(from, to)}${marker}${sourceText.slice(to)}`;
 }
+
+export function listTextSelection(
+  sourceText: string,
+  from: number,
+  to: number,
+  kind: 'bullet' | 'ordered'
+): string | null {
+  if (from < 0 || to <= from || to > sourceText.length) return null;
+  let start = sourceText.lastIndexOf('\n', from - 1) + 1;
+  let end = sourceText.indexOf('\n', to);
+  if (end < 0) end = sourceText.length;
+  const selected = sourceText.slice(start, end);
+  const lines = selected.split('\n');
+  const prefix = kind === 'bullet' ? '- ' : '';
+  const listed = lines.map((line, index) => {
+    if (/^\s*(?:[-*+]\s+|\d+\.\s+)/.test(line)) return line;
+    return kind === 'ordered' ? `${index + 1}. ${line}` : `${prefix}${line}`;
+  }).join('\n');
+  return `${sourceText.slice(0, start)}${listed}${sourceText.slice(end)}`;
+}

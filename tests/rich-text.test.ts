@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { inlineStyleFromPatch, markdownTextSelection, styleTextSelection } from '../src/rich-text';
+import { inlineStyleFromPatch, listTextSelection, markdownTextSelection, styleTextSelection } from '../src/rich-text';
 
 test('converts supported node styles to inline text styles', () => {
   assert.equal(inlineStyleFromPatch({
@@ -26,4 +26,9 @@ test('rejects invalid ranges and node-only styles', () => {
 test('wraps selected text with Markdown emphasis markers', () => {
   assert.equal(markdownTextSelection('Canvas Studio', 0, 6, '**'), '**Canvas** Studio');
   assert.equal(markdownTextSelection('Canvas Studio', 7, 13, '*'), 'Canvas *Studio*');
+});
+
+test('adds a bullet or ordered list to selected lines', () => {
+  assert.equal(listTextSelection('one\ntwo\nthree', 4, 12, 'bullet'), 'one\n- two\n- three');
+  assert.equal(listTextSelection('one\ntwo', 0, 7, 'ordered'), '1. one\n2. two');
 });

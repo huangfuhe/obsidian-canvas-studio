@@ -36,7 +36,7 @@ import { addEmptyLane, arrangeLanes, deleteGroupWithContents, duplicateGroupAsLa
 import { computeMindMapLayout, moveNodesToLayout } from './layout';
 import { outlineToCanvas, parseMarkdownOutline } from './outline';
 import { findCanvasMatches, replaceAllMatches, replaceCurrentMatch, type CanvasSearchMatch } from './search';
-import { markdownTextSelection, styleTextSelection, type TextSelectionSnapshot } from './rich-text';
+import { listTextSelection, markdownTextSelection, styleTextSelection, type TextSelectionSnapshot } from './rich-text';
 import { applyMindMapTheme, collapsedMindMapNodeIds, hiddenMindMapNodeIds, mindMapRootId, MIND_MAP_THEMES, setMindMapRoot as setCanvasMindMapRoot, toggleMindMapBranch } from './mindmap';
 import { snapNodePosition } from './snap';
 import { instantiateSwimlane, SWIMLANE_TEMPLATES } from './swimlane';
@@ -2153,6 +2153,8 @@ export default class CanvasStudioPlugin extends Plugin {
     menu.addItem((item) => item.setTitle('粗体').setIcon('bold').onClick(() => this.applyStyle({ fontWeight: 700 })));
     menu.addItem((item) => item.setTitle('斜体').setIcon('italic').onClick(() => this.applyStyle({ fontStyle: 'italic' })));
     menu.addItem((item) => item.setTitle('下划线').setIcon('underline').onClick(() => this.applyStyle({ textDecoration: 'underline' })));
+    menu.addItem((item) => item.setTitle('项目符号列表').setIcon('list').onClick(() => this.applyListStyle('bullet')));
+    menu.addItem((item) => item.setTitle('编号列表').setIcon('list-ordered').onClick(() => this.applyListStyle('ordered')));
     menu.addItem((item) => item.setTitle('清除强调').setIcon('remove-formatting').onClick(() => this.applyStyle({ fontWeight: null, fontStyle: null, textDecoration: null })));
     menu.addSeparator();
     for (const lineHeight of [1.2, 1.5, 1.8]) {
@@ -2377,6 +2379,24 @@ export default class CanvasStudioPlugin extends Plugin {
       const node = canvas.nodes.get(id);
       if (node) this.applyTypography(node);
     }
+  }
+
+  private applyListStyle(kind: 'bullet' | 'ordered'): void {
+    const canvas = this.currentCanvas();
+    if (!canvas) return;
+    if (!this.pendingTextSelection) this.captureTextSelection();
+    const selection = this.pendingTextSelection;
+    this.pendingTextSelection = null;
+    if (!selection) {
+      new Notice('请先在文本节点中选中要列表化的内容。', 2500);
+      return;
+    }
+    const node = canvas.getData().nodes.find((item) => item.id === selection.nodeId);
+    if (!node) return;
+    const listed = listTextSelection(selection.sourceText, selection.from, selection.to, kind);
+    if (!listed) return;
+    replaceCanvasData(canvas, updateNodes(canvas.getData(), new Set([node.id]), (item) => ({ ...item, text: listed })));
+    new Notice(kind === 'bullet' ? '已应用项目符号列表。' : '已应用编号列表。', 1800);
   }
 
   private applyNodeProperties(patch: Pick<CanvasNodeData, 'color' | 'locked'>): void {

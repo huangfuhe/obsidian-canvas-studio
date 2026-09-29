@@ -296,6 +296,9 @@ The 0.9.71 patch links common actions to the mode state: mind-map operations
 select mind-map mode, while shapes, edges, and flow templates select flowchart
 mode.
 
+The 0.9.72 patch adds bullet-list and ordered-list formatting for selected text
+lines while retaining native Markdown content.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual
