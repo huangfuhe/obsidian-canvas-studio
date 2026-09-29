@@ -213,6 +213,9 @@ added.
 The 0.9.45 patch adds both column-oriented and row-oriented swimlane templates
 using native groups, text nodes, and edges.
 
+The 0.9.46 patch adds a swimlane-direction selector to the contextual inspector,
+reflowing selected lanes and moving their contained nodes together.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual

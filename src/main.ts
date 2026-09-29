@@ -31,7 +31,7 @@ import { moveGroupChildren } from './group-follow';
 import { fitGroupsToChildren } from './group-layout';
 import { groupNodes, resizeGroups, ungroupNodes, updateGroupProperties } from './group-actions';
 import { snapFragmentIntoGroup, snapNodeIntoGroup } from './group-snap';
-import { arrangeLanes, duplicateGroupAsLane, moveGroupLane, removeGroupContainer } from './lane-actions';
+import { arrangeLanes, duplicateGroupAsLane, moveGroupLane, removeGroupContainer, setLaneAxis, type LaneAxis } from './lane-actions';
 import { computeMindMapLayout, moveNodesToLayout } from './layout';
 import { outlineToCanvas, parseMarkdownOutline } from './outline';
 import { findCanvasMatches, replaceAllMatches, replaceCurrentMatch, type CanvasSearchMatch } from './search';
@@ -707,6 +707,14 @@ export default class CanvasStudioPlugin extends Plugin {
       width.addEventListener('change', resize);
       height.addEventListener('change', resize);
       const layoutField = field('分组布局');
+      const axisField = field('泳道方向');
+      const axis = axisField.createEl('select', { attr: { 'aria-label': '泳道方向' } });
+      for (const [value, label] of [['column', '列式（左右）'], ['row', '行式（上下）']] as const) {
+        axis.createEl('option', { value, text: label });
+      }
+      const currentAxis = groups[0]?.styleAttributes?.canvasStudioLaneAxis;
+      axis.value = currentAxis === 'row' ? 'row' : 'column';
+      axis.addEventListener('change', () => this.setSelectedLaneAxis(axis.value as LaneAxis));
       if (groups.length === 1) {
         const laneActions = layoutField.createDiv({ cls: 'canvas-studio-inspector-segmented' });
         const rightLane = laneActions.createEl('button', { text: '复制到右侧' });
@@ -1748,6 +1756,15 @@ export default class CanvasStudioPlugin extends Plugin {
     if (groupIds.size < 2) return;
     replaceCanvasData(canvas, arrangeLanes(canvas.getData(), groupIds, direction));
     new Notice(direction === 'horizontal' ? '已水平整理泳道。' : '已垂直整理泳道。', 1800);
+  }
+
+  private setSelectedLaneAxis(axis: LaneAxis): void {
+    const canvas = this.currentCanvas();
+    if (!canvas || canvas.readonly) return;
+    const ids = new Set(this.selection(canvas).filter((node) => node.type === 'group').map((node) => node.id));
+    if (ids.size === 0) return;
+    replaceCanvasData(canvas, setLaneAxis(canvas.getData(), ids, axis));
+    new Notice(axis === 'row' ? '已切换为行式泳道。' : '已切换为列式泳道。', 1800);
   }
 
   private groupSelection(): void {

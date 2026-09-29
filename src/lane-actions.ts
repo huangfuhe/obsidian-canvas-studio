@@ -1,6 +1,7 @@
 import type { CanvasDocument, CanvasNodeData } from './types';
 
 export type LaneDuplicateDirection = 'right' | 'down';
+export type LaneAxis = 'row' | 'column';
 
 function contains(group: CanvasNodeData, node: CanvasNodeData): boolean {
   const padding = 16;
@@ -136,6 +137,30 @@ export function arrangeLanes(
       if (placement) return { ...node, ...placement };
       const move = childMoves.get(node.id);
       return move ? { ...node, x: node.x + move.dx, y: node.y + move.dy } : node;
+    })
+  };
+}
+
+export function setLaneAxis(
+  data: CanvasDocument,
+  groupIds: ReadonlySet<string>,
+  axis: LaneAxis,
+  gap = 40
+): CanvasDocument {
+  const groups = data.nodes.filter((node) => node.type === 'group' && groupIds.has(node.id));
+  if (groups.length === 0) return data;
+  const arranged = arrangeLanes(data, groupIds, axis === 'row' ? 'vertical' : 'horizontal', gap);
+  return {
+    ...arranged,
+    nodes: arranged.nodes.map((node) => {
+      if (node.type !== 'group' || !groupIds.has(node.id)) return node;
+      return {
+        ...node,
+        styleAttributes: {
+          ...(node.styleAttributes ?? {}),
+          canvasStudioLaneAxis: axis
+        }
+      };
     })
   };
 }
