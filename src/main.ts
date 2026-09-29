@@ -40,6 +40,7 @@ import { snapNodePosition } from './snap';
 import { instantiateSwimlane, SWIMLANE_TEMPLATES } from './swimlane';
 import { FLOW_TEMPLATES, instantiateFlowTemplate } from './templates';
 import { applyCanvasTheme, CANVAS_THEMES } from './themes';
+import { canvasGridEnabled, setCanvasGrid } from './canvas-view';
 import { COMPONENT_LIBRARY, componentsByCategory, filterComponents, type ComponentSpec } from './components';
 import { createSavedComponent, instantiateSavedComponent, type SavedCanvasComponent } from './saved-components';
 import { filterMediaItems, mediaItemsFromPaths, type MediaKind, type MediaItem } from './media';
@@ -89,6 +90,7 @@ const TOOLBAR_ACTIONS = [
   { id: 'edge', icon: 'git-commit-horizontal', label: '连线样式与自动整理', shortLabel: '连线' },
   { id: 'style', icon: 'type', label: '字体与文本样式', shortLabel: '字体' },
   { id: 'theme', icon: 'palette', label: '应用白板主题', shortLabel: '主题' },
+  { id: 'grid', icon: 'grid-2x2', label: '切换画布网格', shortLabel: '网格' },
   { id: 'search', icon: 'search', label: '搜索与替换文本', shortLabel: '搜索' },
   { id: 'export', icon: 'download', label: '导出 PNG/SVG 图片', shortLabel: '导出' },
   { id: 'present', icon: 'presentation', label: '开始演示模式', shortLabel: '演示' },
@@ -105,10 +107,10 @@ const TOOLBAR_ACTIONS = [
 
 type ToolbarActionId = typeof TOOLBAR_ACTIONS[number]['id'];
 const SECONDARY_TOOLBAR_ACTIONS = new Set<ToolbarActionId>([
-  'theme', 'search', 'export', 'present', 'previous-node', 'next-node', 'end-presentation', 'info', 'diagnostics', 'zoom-selection', 'zoom-fit', 'copy-style', 'paste-style'
+  'theme', 'grid', 'search', 'export', 'present', 'previous-node', 'next-node', 'end-presentation', 'info', 'diagnostics', 'zoom-selection', 'zoom-fit', 'copy-style', 'paste-style'
 ]);
 const READONLY_TOOLBAR_ACTIONS = new Set<ToolbarActionId | 'more'>([
-  'search', 'export', 'present', 'previous-node', 'next-node', 'end-presentation', 'info', 'diagnostics', 'zoom-selection', 'zoom-fit', 'more'
+  'search', 'grid', 'export', 'present', 'previous-node', 'next-node', 'end-presentation', 'info', 'diagnostics', 'zoom-selection', 'zoom-fit', 'more'
 ]);
 const COMPONENT_MIME = 'application/x-canvas-studio-component';
 
@@ -459,6 +461,7 @@ export default class CanvasStudioPlugin extends Plugin {
       canvas.wrapperEl.appendChild(this.inspector);
       this.mountComponentDropTarget(canvas);
       this.syncCanvasThemeClass(canvas);
+      this.syncCanvasGridClass(canvas);
       for (const node of canvas.nodes.values()) this.applyTypography(node);
       this.updateToolbarState();
     }, 0);
@@ -512,6 +515,7 @@ export default class CanvasStudioPlugin extends Plugin {
       case 'edge': this.openEdgeMenu(anchor); break;
       case 'style': this.openStyleMenu(anchor); break;
       case 'theme': this.openThemeMenu(anchor); break;
+      case 'grid': this.toggleCanvasGrid(); break;
       case 'search': this.openSearch(); break;
       case 'export': this.openExportMenu(anchor); break;
       case 'present': this.runAdvancedCommand('advanced-canvas:start-presentation'); break;
@@ -1815,6 +1819,20 @@ export default class CanvasStudioPlugin extends Plugin {
     const resolvedThemeId = themeId ?? (typeof canvasStudio?.theme === 'string' ? canvasStudio.theme : undefined);
     const theme = CANVAS_THEMES.find((item) => item.id === resolvedThemeId);
     if (theme) canvas.wrapperEl.classList.add(theme.canvasClass);
+  }
+
+  private syncCanvasGridClass(canvas: RuntimeCanvas, enabled?: boolean): void {
+    if (!canvas.wrapperEl) return;
+    canvas.wrapperEl.toggleClass('canvas-studio-grid-enabled', enabled ?? canvasGridEnabled(canvas.getData()));
+  }
+
+  private toggleCanvasGrid(): void {
+    const canvas = this.currentCanvas();
+    if (!canvas || canvas.readonly) return;
+    const enabled = !canvasGridEnabled(canvas.getData());
+    replaceCanvasData(canvas, setCanvasGrid(canvas.getData(), enabled));
+    this.syncCanvasGridClass(canvas, enabled);
+    new Notice(enabled ? '已显示画布网格。' : '已隐藏画布网格。', 1600);
   }
 
   private applyStyle(patch: CanvasStyleAttributes): void {

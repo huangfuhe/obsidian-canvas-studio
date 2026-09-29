@@ -52,6 +52,17 @@
   outline-offset: -4px;
 }
 
+.canvas-wrapper.canvas-studio-grid-enabled::before {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: linear-gradient(to right, color-mix(in srgb, var(--text-muted) 10%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--text-muted) 10%, transparent) 1px, transparent 1px);
+  background-size: 20px 20px;
+  content: '';
+}
+
 .canvas-studio-edge-waypoint-hidden {
   opacity: 0 !important;
 }

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.38 - 2026-09-29
+
+### Added
+
+- 增加可持久化画布网格开关，写入 `metadata.canvasStudio.grid`。
+- 网格显示使用 Canvas Studio CSS 层，不改变原生节点和文件类型。
+
 ## 0.9.37 - 2026-09-29
 
 ### Added
