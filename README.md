@@ -301,6 +301,8 @@ lines while retaining native Markdown content.
 
 The 0.9.73 patch adds selected-text strikethrough using native Markdown markers.
 
+The 0.9.74 patch adds selected-text Markdown links through a focused URL modal.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual

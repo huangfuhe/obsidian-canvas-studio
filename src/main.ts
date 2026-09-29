@@ -36,7 +36,7 @@ import { addEmptyLane, arrangeLanes, deleteGroupWithContents, duplicateGroupAsLa
 import { computeMindMapLayout, moveNodesToLayout } from './layout';
 import { outlineToCanvas, parseMarkdownOutline } from './outline';
 import { findCanvasMatches, replaceAllMatches, replaceCurrentMatch, type CanvasSearchMatch } from './search';
-import { listTextSelection, markdownTextSelection, styleTextSelection, type TextSelectionSnapshot } from './rich-text';
+import { linkTextSelection, listTextSelection, markdownTextSelection, styleTextSelection, type TextSelectionSnapshot } from './rich-text';
 import { applyMindMapTheme, collapsedMindMapNodeIds, hiddenMindMapNodeIds, mindMapRootId, MIND_MAP_THEMES, setMindMapRoot as setCanvasMindMapRoot, toggleMindMapBranch } from './mindmap';
 import { snapNodePosition } from './snap';
 import { instantiateSwimlane, SWIMLANE_TEMPLATES } from './swimlane';
@@ -2154,6 +2154,7 @@ export default class CanvasStudioPlugin extends Plugin {
     menu.addItem((item) => item.setTitle('斜体').setIcon('italic').onClick(() => this.applyStyle({ fontStyle: 'italic' })));
     menu.addItem((item) => item.setTitle('下划线').setIcon('underline').onClick(() => this.applyStyle({ textDecoration: 'underline' })));
     menu.addItem((item) => item.setTitle('删除线').setIcon('strikethrough').onClick(() => this.applyStyle({ textDecoration: 'line-through' })));
+    menu.addItem((item) => item.setTitle('为选中文字添加链接').setIcon('link').onClick(() => this.openSelectedTextLink()));
     menu.addItem((item) => item.setTitle('项目符号列表').setIcon('list').onClick(() => this.applyListStyle('bullet')));
     menu.addItem((item) => item.setTitle('编号列表').setIcon('list-ordered').onClick(() => this.applyListStyle('ordered')));
     menu.addItem((item) => item.setTitle('清除强调').setIcon('remove-formatting').onClick(() => this.applyStyle({ fontWeight: null, fontStyle: null, textDecoration: null })));
@@ -2398,6 +2399,31 @@ export default class CanvasStudioPlugin extends Plugin {
     if (!listed) return;
     replaceCanvasData(canvas, updateNodes(canvas.getData(), new Set([node.id]), (item) => ({ ...item, text: listed })));
     new Notice(kind === 'bullet' ? '已应用项目符号列表。' : '已应用编号列表。', 1800);
+  }
+
+  private openSelectedTextLink(): void {
+    if (!this.pendingTextSelection) this.captureTextSelection();
+    if (!this.pendingTextSelection) {
+      new Notice('请先在文本节点中选中要添加链接的文字。', 2500);
+      return;
+    }
+    new LinkInsertModal(this.app, (url) => this.applySelectedTextLink(url), { title: '为选中文字添加链接', hideLabel: true }).open();
+  }
+
+  private applySelectedTextLink(url: string): void {
+    const canvas = this.currentCanvas();
+    const selection = this.pendingTextSelection;
+    this.pendingTextSelection = null;
+    if (!canvas || !selection) return;
+    const node = canvas.getData().nodes.find((item) => item.id === selection.nodeId);
+    if (!node) return;
+    const linked = linkTextSelection(selection.sourceText, selection.from, selection.to, url);
+    if (!linked) {
+      new Notice('链接只能应用到单行选中文字。', 2500);
+      return;
+    }
+    replaceCanvasData(canvas, updateNodes(canvas.getData(), new Set([node.id]), (item) => ({ ...item, text: linked })));
+    new Notice('已为选中文字添加链接。', 1800);
   }
 
   private applyNodeProperties(patch: Pick<CanvasNodeData, 'color' | 'locked'>): void {
@@ -2878,20 +2904,21 @@ class MediaLibraryModal extends Modal {
 class LinkInsertModal extends Modal {
   constructor(
     app: CanvasStudioPlugin['app'],
-    private readonly submit: (url: string, label: string) => void
+    private readonly submit: (url: string, label: string) => void,
+    private readonly options: { title?: string; hideLabel?: boolean } = {}
   ) {
     super(app);
   }
 
   override onOpen(): void {
-    this.titleEl.setText('插入链接节点');
+    this.titleEl.setText(this.options.title ?? '插入链接节点');
     const urlField = this.contentEl.createEl('label', { text: '链接地址' });
     const url = urlField.createEl('input', {
       type: 'url',
       attr: { placeholder: 'https://example.com', 'aria-label': '链接地址' }
     });
-    const labelField = this.contentEl.createEl('label', { text: '显示标题（可选）' });
-    const label = labelField.createEl('input', {
+    const labelField = this.options.hideLabel ? null : this.contentEl.createEl('label', { text: '显示标题（可选）' });
+    const label = labelField?.createEl('input', {
       type: 'text',
       attr: { placeholder: '例如：项目文档', 'aria-label': '链接显示标题' }
     });
@@ -2904,13 +2931,13 @@ class LinkInsertModal extends Modal {
         new Notice('请输入有效链接。', 2500);
         return;
       }
-      this.submit(normalized, label.value);
+      this.submit(normalized, label?.value ?? '');
       this.close();
     };
     cancel.addEventListener('click', () => this.close());
     insert.addEventListener('click', commit);
     url.addEventListener('keydown', (event) => { if (event.key === 'Enter') commit(); });
-    label.addEventListener('keydown', (event) => { if (event.key === 'Enter') commit(); });
+    label?.addEventListener('keydown', (event) => { if (event.key === 'Enter') commit(); });
     window.setTimeout(() => url.focus(), 0);
   }
 

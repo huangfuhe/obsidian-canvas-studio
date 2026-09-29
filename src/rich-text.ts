@@ -68,3 +68,15 @@ export function listTextSelection(
   }).join('\n');
   return `${sourceText.slice(0, start)}${listed}${sourceText.slice(end)}`;
 }
+
+export function linkTextSelection(
+  sourceText: string,
+  from: number,
+  to: number,
+  url: string
+): string | null {
+  if (from < 0 || to <= from || to > sourceText.length || !url.trim()) return null;
+  const selected = sourceText.slice(from, to);
+  if (selected.includes('\n')) return null;
+  return `${sourceText.slice(0, from)}[${selected}](${url.trim()})${sourceText.slice(to)}`;
+}
