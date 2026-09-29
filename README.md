@@ -306,6 +306,9 @@ The 0.9.74 patch adds selected-text Markdown links through a focused URL modal.
 The 0.9.75 patch adds configurable drawing color/width and an undo-last-stroke
 action while keeping strokes in optional Canvas Studio metadata.
 
+The 0.9.76 patch adds a drag-capable eraser that removes the nearest stored
+stroke without modifying Canvas nodes or edges.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual

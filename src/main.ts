@@ -50,7 +50,7 @@ import { createLinkNode, normalizeLinkUrl } from './links';
 import { createBasicTextNode, createShapeNode, type BasicShape, type BasicTextKind } from './basic-nodes';
 import { canvasPointToClient, clientPointToCanvas, parseCssTransform } from './canvas-position';
 import { addWaypointAtLongestSegment, edgeRoutePoints, EDGE_WAYPOINTS_KEY, parseEdgeWaypoints, polylinePath, routeEdgeWithObstacles, serializeEdgeWaypoints, type EdgeWaypoint } from './edge-waypoints';
-import { addCanvasStroke, canvasStrokes, clearCanvasStrokes, removeLastCanvasStroke, type CanvasStroke, type StrokePoint } from './strokes';
+import { addCanvasStroke, canvasStrokes, clearCanvasStrokes, removeLastCanvasStroke, removeStrokeNearPoint, type CanvasStroke, type StrokePoint } from './strokes';
 import type { CanvasDocument, CanvasEdgeData, CanvasNodeData, CanvasStyleAttributes, LayoutDirection } from './types';
 
 interface CanvasStudioSettings {
@@ -147,6 +147,7 @@ export default class CanvasStudioPlugin extends Plugin {
   private drawingPoints: StrokePoint[] = [];
   private drawingColor = '#4f7cff';
   private drawingWidth = 3;
+  private drawingTool: 'pen' | 'eraser' = 'pen';
   private laneTargetNotice: HTMLElement | null = null;
 
   override async onload(): Promise<void> {
@@ -1013,6 +1014,11 @@ export default class CanvasStudioPlugin extends Plugin {
     const drawingField = container.createDiv({ cls: 'canvas-studio-inspector-field' });
     drawingField.createEl('label', { text: '手绘笔刷' });
     const drawingControls = drawingField.createDiv({ cls: 'canvas-studio-inspector-segmented' });
+    const drawingTool = drawingControls.createEl('select', { attr: { 'aria-label': '手绘工具' } });
+    drawingTool.createEl('option', { value: 'pen', text: '画笔' });
+    drawingTool.createEl('option', { value: 'eraser', text: '橡皮擦' });
+    drawingTool.value = this.drawingTool;
+    drawingTool.addEventListener('change', () => { this.drawingTool = drawingTool.value as 'pen' | 'eraser'; });
     const drawingColor = drawingControls.createEl('input', { type: 'color', value: this.drawingColor, attr: { 'aria-label': '手绘颜色' } });
     drawingColor.addEventListener('input', () => { this.drawingColor = drawingColor.value; });
     const drawingWidth = drawingControls.createEl('select', { attr: { 'aria-label': '手绘粗细' } });
@@ -1075,8 +1081,13 @@ export default class CanvasStudioPlugin extends Plugin {
     event.preventDefault();
     event.stopPropagation();
     this.drawingPointerId = event.pointerId;
-    this.drawingPoints = [this.componentDropPoint(canvas, event.clientX, event.clientY)];
     canvas.wrapperEl?.setPointerCapture?.(event.pointerId);
+    const point = this.componentDropPoint(canvas, event.clientX, event.clientY);
+    if (this.drawingTool === 'eraser') {
+      this.eraseStrokeAt(canvas, point);
+      return;
+    }
+    this.drawingPoints = [point];
     this.renderDrawingOverlay(canvas, this.drawingPoints);
   }
 
@@ -1084,6 +1095,10 @@ export default class CanvasStudioPlugin extends Plugin {
     if (!this.drawingActive || this.drawingPointerId !== event.pointerId || !this.drawingCanvas) return;
     event.preventDefault();
     const point = this.componentDropPoint(this.drawingCanvas, event.clientX, event.clientY);
+    if (this.drawingTool === 'eraser') {
+      this.eraseStrokeAt(this.drawingCanvas, point);
+      return;
+    }
     const previous = this.drawingPoints[this.drawingPoints.length - 1];
     if (!previous || Math.hypot(point.x - previous.x, point.y - previous.y) >= 3) this.drawingPoints.push(point);
     this.renderDrawingOverlay(this.drawingCanvas, this.drawingPoints);
@@ -1093,6 +1108,10 @@ export default class CanvasStudioPlugin extends Plugin {
     if (!this.drawingActive || this.drawingPointerId !== event.pointerId || !this.drawingCanvas) return;
     event.preventDefault();
     const canvas = this.drawingCanvas;
+    if (this.drawingTool === 'eraser') {
+      this.drawingPointerId = null;
+      return;
+    }
     const points = this.drawingPoints;
     this.drawingPointerId = null;
     this.drawingPoints = [];
@@ -1160,6 +1179,14 @@ export default class CanvasStudioPlugin extends Plugin {
     replaceCanvasData(canvas, removeLastCanvasStroke(canvas.getData()));
     this.renderDrawingOverlay(canvas);
     new Notice('已撤销上一笔手绘。', 1500);
+  }
+
+  private eraseStrokeAt(canvas: RuntimeCanvas, point: StrokePoint): void {
+    const data = canvas.getData();
+    const nextData = removeStrokeNearPoint(data, point, 10);
+    if (nextData === data) return;
+    replaceCanvasData(canvas, nextData);
+    this.renderDrawingOverlay(canvas);
   }
 
   private refreshEdgeWaypointOverlay(canvas?: RuntimeCanvas): void {

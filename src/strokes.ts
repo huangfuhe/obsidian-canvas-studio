@@ -62,3 +62,30 @@ export function removeLastCanvasStroke(data: CanvasDocument): CanvasDocument {
     metadata: { ...metadata, canvasStudio: { ...studio, [STROKES_KEY]: strokes.slice(0, -1) } }
   };
 }
+
+function distanceToSegment(point: StrokePoint, start: StrokePoint, end: StrokePoint): number {
+  const dx = end.x - start.x;
+  const dy = end.y - start.y;
+  if (dx === 0 && dy === 0) return Math.hypot(point.x - start.x, point.y - start.y);
+  const t = Math.max(0, Math.min(1, ((point.x - start.x) * dx + (point.y - start.y) * dy) / (dx * dx + dy * dy)));
+  return Math.hypot(point.x - (start.x + t * dx), point.y - (start.y + t * dy));
+}
+
+export function removeStrokeNearPoint(
+  data: CanvasDocument,
+  point: StrokePoint,
+  tolerance = 12
+): CanvasDocument {
+  const strokes = canvasStrokes(data);
+  const index = strokes.findIndex((stroke) => stroke.points.some((start, pointIndex) => {
+    const end = stroke.points[pointIndex + 1];
+    return end && distanceToSegment(point, start, end) <= tolerance + (stroke.width ?? 3) / 2;
+  }));
+  if (index < 0) return data;
+  const metadata = (data.metadata as Record<string, unknown> | undefined) ?? {};
+  const studio = (metadata.canvasStudio as Record<string, unknown> | undefined) ?? {};
+  return {
+    ...data,
+    metadata: { ...metadata, canvasStudio: { ...studio, [STROKES_KEY]: strokes.filter((_, strokeIndex) => strokeIndex !== index) } }
+  };
+}
