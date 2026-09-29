@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { COMPONENT_LIBRARY, componentsByCategory } from '../src/components';
+import { COMPONENT_LIBRARY, componentsByCategory, filterComponents } from '../src/components';
 
 test('component library has categorized native Canvas components', () => {
   const categories = componentsByCategory();
@@ -14,4 +14,10 @@ test('component library has categorized native Canvas components', () => {
     assert.ok(canvas.nodes.every((node) => ['text', 'group'].includes(node.type)), component.id);
     assert.ok(canvas.nodes.every((node) => node.x >= 100 && node.y >= 200), component.id);
   }
+});
+
+test('filters built-in components without dropping the library', () => {
+  assert.equal(filterComponents(COMPONENT_LIBRARY, '').length, COMPONENT_LIBRARY.length);
+  assert.equal(filterComponents(COMPONENT_LIBRARY, '表格')[0]?.id, 'table');
+  assert.equal(filterComponents(COMPONENT_LIBRARY, '不存在').length, 0);
 });

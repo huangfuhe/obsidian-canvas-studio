@@ -154,3 +154,11 @@ export function componentsByCategory(extra: ComponentSpec[] = []): Map<Component
   }
   return result;
 }
+
+export function filterComponents(components: ComponentSpec[], query: string): ComponentSpec[] {
+  const normalized = query.trim().toLocaleLowerCase();
+  if (!normalized) return components;
+  return components.filter((component) => `${component.name} ${component.category} ${component.description}`
+    .toLocaleLowerCase()
+    .includes(normalized));
+}

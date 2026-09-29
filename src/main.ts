@@ -38,7 +38,7 @@ import { snapNodePosition } from './snap';
 import { instantiateSwimlane, SWIMLANE_TEMPLATES } from './swimlane';
 import { FLOW_TEMPLATES, instantiateFlowTemplate } from './templates';
 import { applyCanvasTheme, CANVAS_THEMES } from './themes';
-import { COMPONENT_LIBRARY, componentsByCategory, type ComponentSpec } from './components';
+import { COMPONENT_LIBRARY, componentsByCategory, filterComponents, type ComponentSpec } from './components';
 import { createSavedComponent, instantiateSavedComponent, type SavedCanvasComponent } from './saved-components';
 import { filterMediaItems, mediaItemsFromPaths, type MediaKind, type MediaItem } from './media';
 import { createLinkNode, normalizeLinkUrl } from './links';
@@ -2009,19 +2009,15 @@ class ComponentLibraryModal extends Modal {
 
   private renderComponents(): void {
     this.componentList.empty();
-    const builtInIds = new Set(COMPONENT_LIBRARY.map((component) => component.id));
-    const extra = this.components.filter((component) => !builtInIds.has(component.id));
     const query = this.searchInput.value.trim().toLocaleLowerCase();
-    const categories = componentsByCategory(extra);
+    const categories = componentsByCategory(filterComponents(this.components, query));
     let rendered = 0;
     for (const [category, components] of categories) {
-      const visible = components.filter((component) => !query
-        || `${component.name} ${component.category} ${component.description}`.toLocaleLowerCase().includes(query));
-      if (visible.length === 0) continue;
-      rendered += visible.length;
+      if (components.length === 0) continue;
+      rendered += components.length;
       this.componentList.createEl('h3', { text: category, cls: 'canvas-studio-component-category' });
       const grid = this.componentList.createDiv({ cls: 'canvas-studio-component-grid' });
-      for (const component of visible) {
+      for (const component of components) {
         const button = grid.createEl('button', { cls: 'canvas-studio-component-card', attr: { draggable: 'true' } });
         button.draggable = true;
         setIcon(button, component.id === 'button' ? 'square-mouse-pointer' : component.id === 'input' ? 'text-cursor-input' : component.id === 'tag' ? 'tag' : component.id === 'info-card' ? 'panel-top' : 'triangle-alert');
