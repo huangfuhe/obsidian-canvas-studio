@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { mergeEdgeStyle, mergeNodeStyle, parseCanvasDocument, safeInsertionOrigin, serializeCanvasDocument } from '../src/canvas-data';
+import { mergeEdgePresentation, mergeEdgeStyle, mergeNodeStyle, parseCanvasDocument, safeInsertionOrigin, serializeCanvasDocument } from '../src/canvas-data';
 
 test('preserves unknown top-level and node fields through canvas round-trip', () => {
   const source = JSON.stringify({
@@ -31,6 +31,14 @@ test('merges edge styles while preserving unrelated edge fields', () => {
   assert.deepEqual(mergeEdgeStyle(edge, { path: null, arrow: 'diamond' }), {
     id: 'e', fromNode: 'a', toNode: 'b', label: 'kept', styleAttributes: { arrow: 'diamond' }
   });
+});
+
+test('writes edge arrow endpoints at the native edge level', () => {
+  const edge = { id: 'e', fromNode: 'a', toNode: 'b', styleAttributes: { path: 'solid' } };
+  const result = mergeEdgePresentation(edge, { fromEnd: 'arrow', toEnd: 'none' });
+  assert.equal(result.fromEnd, 'arrow');
+  assert.equal(result.toEnd, 'none');
+  assert.deepEqual(result.styleAttributes, { path: 'solid' });
 });
 
 test('places imported structures outside the current canvas bounds', () => {

@@ -22,7 +22,7 @@ import {
   type RuntimeCanvasNode
 } from './canvas-compat';
 import { arrangeNodes, type ArrangeMode } from './arrange';
-import { alignCanvasEdges, mergeEdgeStyle, mergeNodeStyle, safeInsertionOrigin, updateNodes } from './canvas-data';
+import { alignCanvasEdges, mergeEdgePresentation, mergeEdgeStyle, mergeNodeStyle, safeInsertionOrigin, updateNodes } from './canvas-data';
 import { connectNodes } from './edge-actions';
 import { deleteSelection, duplicateSelection } from './selection-actions';
 import { reorderNodes, type LayerAction } from './object-actions';
@@ -946,6 +946,12 @@ export default class CanvasStudioPlugin extends Plugin {
     color.value = typeof edges[0]?.color === 'string' && /^[1-6]$/.test(edges[0].color) ? edges[0].color : '5';
     color.addEventListener('change', () => this.applyEdgeColor(color.value));
 
+    const fromArrowField = container.createDiv({ cls: 'canvas-studio-inspector-field' });
+    fromArrowField.createEl('label', { text: '起点箭头' });
+    const fromArrow = fromArrowField.createEl('select');
+    for (const [value, label] of [['none', '无箭头'], ['arrow', '三角箭头']] as const) fromArrow.createEl('option', { value, text: label });
+    fromArrow.value = edges[0]?.fromEnd === 'arrow' ? 'arrow' : 'none';
+    fromArrow.addEventListener('change', () => this.applyEdgeStyle({ fromEnd: fromArrow.value }));
     const arrowField = container.createDiv({ cls: 'canvas-studio-inspector-field' });
     arrowField.createEl('label', { text: '终点箭头' });
     const arrow = arrowField.createEl('select');
@@ -2463,7 +2469,7 @@ export default class CanvasStudioPlugin extends Plugin {
     const data = canvas.getData();
     replaceCanvasData(canvas, {
       ...data,
-      edges: data.edges.map((edge) => ids.has(edge.id) ? mergeEdgeStyle(edge, patch) : edge)
+      edges: data.edges.map((edge) => ids.has(edge.id) ? mergeEdgePresentation(edge, patch) : edge)
     });
   }
 

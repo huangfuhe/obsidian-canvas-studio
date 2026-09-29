@@ -271,6 +271,9 @@ retaining the native pill shape and recording an optional flow role.
 The 0.9.63 patch adds top/middle/bottom vertical text alignment in the node
 inspector using optional `styleAttributes.verticalAlign`.
 
+The 0.9.64 patch fixes native edge arrow persistence and adds a start-arrow
+selector for bidirectional flowchart connections.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual

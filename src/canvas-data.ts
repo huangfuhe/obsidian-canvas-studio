@@ -70,6 +70,23 @@ export function mergeEdgeStyle(
   };
 }
 
+export function mergeEdgePresentation(
+  edge: CanvasEdgeData,
+  patch: CanvasStyleAttributes
+): CanvasEdgeData {
+  const fromEnd = patch.fromEnd;
+  const toEnd = patch.toEnd;
+  const stylePatch = { ...patch };
+  delete stylePatch.fromEnd;
+  delete stylePatch.toEnd;
+  const next = mergeEdgeStyle(edge, stylePatch);
+  if (fromEnd === null) delete next.fromEnd;
+  else if (fromEnd !== undefined) next.fromEnd = fromEnd as CanvasEdgeData['fromEnd'];
+  if (toEnd === null) delete next.toEnd;
+  else if (toEnd !== undefined) next.toEnd = toEnd as CanvasEdgeData['toEnd'];
+  return next;
+}
+
 export function updateNodes(
   data: CanvasDocument,
   nodeIds: ReadonlySet<string>,
