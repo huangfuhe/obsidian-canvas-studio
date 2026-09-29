@@ -283,6 +283,9 @@ the contextual inspector.
 The 0.9.67 patch clears stale custom arrow styling when switching an edge back
 to native triangle or no-arrow endpoints.
 
+The 0.9.68 patch adds a persistent canvas-mode selector for free whiteboard,
+mind-map, and flowchart workflows.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual

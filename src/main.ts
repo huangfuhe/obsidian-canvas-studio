@@ -42,7 +42,7 @@ import { snapNodePosition } from './snap';
 import { instantiateSwimlane, SWIMLANE_TEMPLATES } from './swimlane';
 import { FLOW_TEMPLATES, instantiateFlowTemplate } from './templates';
 import { applyCanvasTheme, CANVAS_THEMES } from './themes';
-import { canvasBackground, canvasGridEnabled, setCanvasBackground, setCanvasGrid, type CanvasBackground } from './canvas-view';
+import { canvasBackground, canvasGridEnabled, canvasMode, setCanvasBackground, setCanvasGrid, setCanvasMode, type CanvasBackground, type CanvasMode } from './canvas-view';
 import { COMPONENT_LIBRARY, componentsByCategory, filterComponents, type ComponentSpec } from './components';
 import { createSavedComponent, instantiateSavedComponent, type SavedCanvasComponent } from './saved-components';
 import { filterMediaItems, mediaItemsFromPaths, type MediaKind, type MediaItem } from './media';
@@ -986,6 +986,12 @@ export default class CanvasStudioPlugin extends Plugin {
     summary.createDiv({ text: `连线 ${data.edges.length}` });
     summary.createDiv({ text: `分区 ${data.nodes.filter((node) => node.type === 'group').length}` });
     summary.createDiv({ text: '选择对象后显示上下文属性' });
+    const modeField = container.createDiv({ cls: 'canvas-studio-inspector-field' });
+    modeField.createEl('label', { text: '编辑模式' });
+    const mode = modeField.createEl('select', { attr: { 'aria-label': '编辑模式' } });
+    for (const [value, label] of [['free', '自由白板'], ['mindmap', '思维导图'], ['flowchart', '流程图']] as const) mode.createEl('option', { value, text: label });
+    mode.value = canvasMode(data);
+    mode.addEventListener('change', () => this.setCanvasMode(mode.value as CanvasMode));
     const backgroundField = container.createDiv({ cls: 'canvas-studio-inspector-field' });
     backgroundField.createEl('label', { text: '画布背景' });
     const background = backgroundField.createEl('select', { attr: { 'aria-label': '画布背景' } });
@@ -2313,6 +2319,13 @@ export default class CanvasStudioPlugin extends Plugin {
     if (!canvas || canvas.readonly) return;
     replaceCanvasData(canvas, setCanvasBackground(canvas.getData(), background));
     this.syncCanvasBackgroundClass(canvas, background);
+  }
+
+  private setCanvasMode(mode: CanvasMode): void {
+    const canvas = this.currentCanvas();
+    if (!canvas || canvas.readonly) return;
+    replaceCanvasData(canvas, setCanvasMode(canvas.getData(), mode));
+    new Notice(`已切换到${mode === 'mindmap' ? '思维导图' : mode === 'flowchart' ? '流程图' : '自由白板'}模式。`, 1600);
   }
 
   private syncCanvasBackgroundClass(canvas: RuntimeCanvas, background?: CanvasBackground): void {

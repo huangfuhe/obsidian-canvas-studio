@@ -1,6 +1,7 @@
 import type { CanvasDocument } from './types';
 
 export type CanvasBackground = 'default' | 'plain' | 'cool' | 'warm';
+export type CanvasMode = 'free' | 'mindmap' | 'flowchart';
 
 export function canvasGridEnabled(data: CanvasDocument): boolean {
   const metadata = data.metadata as Record<string, unknown> | undefined;
@@ -31,4 +32,17 @@ export function setCanvasBackground(data: CanvasDocument, background: CanvasBack
     ...data,
     metadata: { ...metadata, canvasStudio: { ...studio, background } }
   };
+}
+
+export function canvasMode(data: CanvasDocument): CanvasMode {
+  const metadata = data.metadata as Record<string, unknown> | undefined;
+  const studio = metadata?.canvasStudio as Record<string, unknown> | undefined;
+  const value = studio?.mode;
+  return value === 'mindmap' || value === 'flowchart' ? value : 'free';
+}
+
+export function setCanvasMode(data: CanvasDocument, mode: CanvasMode): CanvasDocument {
+  const metadata = (data.metadata as Record<string, unknown> | undefined) ?? {};
+  const studio = (metadata.canvasStudio as Record<string, unknown> | undefined) ?? {};
+  return { ...data, metadata: { ...metadata, canvasStudio: { ...studio, mode } } };
 }
