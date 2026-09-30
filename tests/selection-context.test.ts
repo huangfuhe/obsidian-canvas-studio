@@ -12,5 +12,7 @@ test('hides editing actions according to selection context', () => {
   assert.equal(isContextualActionHidden('edge', 'nodes'), true);
   assert.equal(isContextualActionHidden('edge', 'edges'), false);
   assert.equal(isContextualActionHidden('style', 'canvas'), true);
+  assert.equal(isContextualActionHidden('set-start-node', 'canvas'), true);
+  assert.equal(isContextualActionHidden('set-start-node', 'nodes'), false);
   assert.equal(isContextualActionHidden('text', 'canvas'), false);
 });

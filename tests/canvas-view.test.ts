@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { canvasBackground, canvasGridEnabled, canvasMode, setCanvasBackground, setCanvasGrid, setCanvasMode } from '../src/canvas-view';
+import { canvasBackground, canvasGridEnabled, canvasMode, canvasPresentationStartNode, setCanvasBackground, setCanvasGrid, setCanvasMode, setCanvasPresentationStartNode } from '../src/canvas-view';
 import type { CanvasDocument } from '../src/types';
 
 test('persists the canvas grid flag without dropping metadata', () => {
@@ -28,4 +28,11 @@ test('persists a canvas editing mode alongside other metadata', () => {
   assert.equal(canvasMode(result), 'mindmap');
   assert.equal((result.metadata as Record<string, unknown>).keep, true);
   assert.equal(canvasMode(setCanvasMode(result, 'flowchart')), 'flowchart');
+});
+
+test('persists the native presentation start node alongside unknown metadata', () => {
+  const data: CanvasDocument = { metadata: { keep: true }, nodes: [], edges: [] };
+  const result = setCanvasPresentationStartNode(data, 'node-start');
+  assert.equal(canvasPresentationStartNode(result), 'node-start');
+  assert.equal((result.metadata as Record<string, unknown>).keep, true);
 });

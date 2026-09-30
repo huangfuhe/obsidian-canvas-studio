@@ -64,14 +64,14 @@ const CROSS_TEAM_EDGES: SwimlaneSpec['edges'] = [
 export const SWIMLANE_TEMPLATES: SwimlaneSpec[] = [
   {
     id: 'cross-team-request',
-    name: '跨团队协作泳道',
+    name: '多角色流程泳道',
     lanes: CROSS_TEAM_LANES,
     steps: CROSS_TEAM_STEPS,
     edges: CROSS_TEAM_EDGES
   },
   {
     id: 'cross-team-request-rows',
-    name: '跨团队协作泳道（行式）',
+    name: '多角色流程泳道（行式）',
     orientation: 'rows',
     lanes: CROSS_TEAM_LANES,
     steps: CROSS_TEAM_STEPS,

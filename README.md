@@ -29,7 +29,7 @@ The 0.3.x development build adds local Canvas text search and replacement:
 
 The 0.4.x development build adds:
 
-- a declarative cross-team swimlane template stored as native groups, text nodes,
+- a declarative multi-role process swimlane template stored as native groups, text nodes,
   and edges;
 - three semantic node/edge themes for whole canvases or current selections;
 - a unified image-export menu backed by Advanced Canvas;
@@ -124,8 +124,7 @@ The 0.9.17 patch fixes built-in component visibility in the component library
 and adds component search with an empty-state message.
 
 The 0.9.18 patch labels the export menu with the PNG/SVG formats exposed by
-Advanced Canvas; PDF export is not claimed until a dedicated implementation is
-available.
+Advanced Canvas; PDF export was not claimed at that point.
 
 The 0.9.19 development build adds native Canvas link-node insertion for web,
 Obsidian, and mailto URLs.
@@ -253,9 +252,8 @@ node types.
 The 0.9.58 patch aligns the development status documents with the current
 0.9.x implementation and verification scope.
 
-The 0.9.59 documentation check records that the running Obsidian CLI exposes no
-PDF/print/export command; Canvas Studio therefore continues to claim PNG/SVG
-only until a dedicated PDF implementation exists.
+The 0.9.59 documentation check records that the running Obsidian CLI exposed no
+PDF/print/export command; the dedicated print action was added later.
 
 The 0.9.60 documentation check records a real Obsidian CLI Canvas smoke gate:
 the row-oriented swimlane command wrote native `group`/`text`/`edge` data to an
@@ -357,10 +355,33 @@ shortcuts in non-editing Canvas focus.
 The 0.9.93 documentation update records the current 113-test verification
 scope after the keyboard shortcut support.
 
+The 0.9.94 patch adds print-to-PDF output through the host print dialog and
+keeps the plugin explicitly local and single-user. It also highlights edges
+associated with the current node selection without writing presentation state
+to the `.canvas` file, and exposes a Chinese command for setting the native
+presentation start node. During presentation mode, Canvas Studio's editing
+overlays are hidden so the native Canvas view remains unobstructed.
+
+The 0.9.95 patch adds command-palette insertion for the built-in components.
+
+The current focused verification scope is 116 tests.
+
+Built-in components can be inserted from the component library or the Obsidian
+command palette; each insertion remains native `text`/`group` Canvas data.
+
+The current export menu includes the PNG/SVG formats exposed by Advanced Canvas
+and a print action that fits the current Canvas viewport before opening the host
+print dialog. Users can choose "Save to PDF" there without changing the native
+`.canvas` file. PDF output is provided through the host print dialog rather than
+a new Canvas file type; the source of truth remains the native `.canvas` file.
+The current environment has no available printer, so actual print output remains
+unverified and is not claimed as completed UI end-to-end coverage.
+
 ## Data policy
 
 Canvas Studio keeps standard JSON Canvas node types and stores optional visual
 properties in `styleAttributes`. It does not create a second content file.
-This is a local single-user whiteboard plugin; multiplayer editing,
-collaboration cursors, comments, mentions, and realtime synchronization are
-intentionally out of scope.
+This is a local single-user whiteboard plugin. Multiplayer editing,
+collaboration cursors, comments, mentions, account permissions, cloud
+synchronization, and a collaboration service are intentionally out of scope;
+the swimlane templates describe process roles only.

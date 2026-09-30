@@ -53,6 +53,7 @@ export interface RuntimeCanvas {
   metadata?: Record<string, unknown>;
   data?: CanvasDocument;
   nodes: Map<string, RuntimeCanvasNode>;
+  edges?: Map<string, RuntimeCanvasEdge>;
   selection: Set<RuntimeCanvasElement>;
   getData(): CanvasDocument;
   getSelectionData?(): { nodes: CanvasNodeData[]; edges: CanvasEdgeData[] };

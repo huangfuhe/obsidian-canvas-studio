@@ -46,3 +46,13 @@ export function setCanvasMode(data: CanvasDocument, mode: CanvasMode): CanvasDoc
   const studio = (metadata.canvasStudio as Record<string, unknown> | undefined) ?? {};
   return { ...data, metadata: { ...metadata, canvasStudio: { ...studio, mode } } };
 }
+
+export function canvasPresentationStartNode(data: CanvasDocument): string | null {
+  const metadata = data.metadata as Record<string, unknown> | undefined;
+  return typeof metadata?.startNode === 'string' ? metadata.startNode : null;
+}
+
+export function setCanvasPresentationStartNode(data: CanvasDocument, nodeId: string): CanvasDocument {
+  const metadata = (data.metadata as Record<string, unknown> | undefined) ?? {};
+  return { ...data, metadata: { ...metadata, startNode: nodeId } };
+}

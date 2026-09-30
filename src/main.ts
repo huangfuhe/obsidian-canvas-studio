@@ -24,6 +24,7 @@ import {
 import { arrangeNodes, type ArrangeMode } from './arrange';
 import { alignCanvasEdges, edgeArrowSelection, mergeEdgePresentation, mergeEdgeStyle, mergeNodeStyle, safeInsertionOrigin, updateNodes } from './canvas-data';
 import { connectNodes } from './edge-actions';
+import { associatedEdgeIds } from './edge-highlighting';
 import { deleteSelection, duplicateSelection } from './selection-actions';
 import { reorderNodes, type LayerAction } from './object-actions';
 import { describeSelectionContext, isContextualActionHidden } from './selection-context';
@@ -43,7 +44,7 @@ import { instantiateSwimlane, SWIMLANE_TEMPLATES } from './swimlane';
 import { FLOW_TEMPLATES, instantiateFlowTemplate } from './templates';
 import { applyCanvasTheme, CANVAS_THEMES } from './themes';
 import { addTableColumn, addTableRow, insertTableColumnAfter, insertTableRowAfter, removeLastTableColumn, removeLastTableRow, removeTableColumnAtCell, removeTableRowAtCell, resizeTableCells } from './table-actions';
-import { canvasBackground, canvasGridEnabled, canvasMode, setCanvasBackground, setCanvasGrid, setCanvasMode, type CanvasBackground, type CanvasMode } from './canvas-view';
+import { canvasBackground, canvasGridEnabled, canvasMode, setCanvasBackground, setCanvasGrid, setCanvasMode, setCanvasPresentationStartNode, type CanvasBackground, type CanvasMode } from './canvas-view';
 import { COMPONENT_LIBRARY, componentsByCategory, filterComponents, type ComponentSpec } from './components';
 import { createSavedComponent, instantiateSavedComponent, type SavedCanvasComponent } from './saved-components';
 import { classifyMediaPath, filterMediaItems, mediaItemsFromPaths, type MediaKind, type MediaItem } from './media';
@@ -100,8 +101,9 @@ const TOOLBAR_ACTIONS = [
   { id: 'grid', icon: 'grid-2x2', label: '切换画布网格', shortLabel: '网格' },
   { id: 'clear-draw', icon: 'eraser', label: '清除手绘', shortLabel: '清除' },
   { id: 'search', icon: 'search', label: '搜索与替换文本', shortLabel: '搜索' },
-  { id: 'export', icon: 'download', label: '导出 PNG/SVG 图片', shortLabel: '导出' },
+  { id: 'export', icon: 'download', label: '导出图片或 PDF', shortLabel: '导出' },
   { id: 'present', icon: 'presentation', label: '开始演示模式', shortLabel: '演示' },
+  { id: 'set-start-node', icon: 'play-circle', label: '设置演示起点', shortLabel: '起点' },
   { id: 'previous-node', icon: 'arrow-left', label: '演示上一个节点', shortLabel: '上一个' },
   { id: 'next-node', icon: 'arrow-right', label: '演示下一个节点', shortLabel: '下一个' },
   { id: 'end-presentation', icon: 'x', label: '结束演示模式', shortLabel: '结束' },
@@ -115,10 +117,10 @@ const TOOLBAR_ACTIONS = [
 
 type ToolbarActionId = typeof TOOLBAR_ACTIONS[number]['id'];
 const SECONDARY_TOOLBAR_ACTIONS = new Set<ToolbarActionId>([
-  'theme', 'grid', 'clear-draw', 'search', 'export', 'present', 'previous-node', 'next-node', 'end-presentation', 'info', 'diagnostics', 'zoom-selection', 'zoom-fit', 'copy-style', 'paste-style'
+  'theme', 'grid', 'clear-draw', 'search', 'export', 'present', 'set-start-node', 'previous-node', 'next-node', 'end-presentation', 'info', 'diagnostics', 'zoom-selection', 'zoom-fit', 'copy-style', 'paste-style'
 ]);
 const READONLY_TOOLBAR_ACTIONS = new Set<ToolbarActionId | 'more'>([
-  'search', 'grid', 'clear-draw', 'export', 'present', 'previous-node', 'next-node', 'end-presentation', 'info', 'diagnostics', 'zoom-selection', 'zoom-fit', 'more'
+  'search', 'grid', 'clear-draw', 'export', 'present', 'set-start-node', 'previous-node', 'next-node', 'end-presentation', 'info', 'diagnostics', 'zoom-selection', 'zoom-fit', 'more'
 ]);
 const COMPONENT_MIME = 'application/x-canvas-studio-component';
 const COMPONENT_DRAG_STORAGE_KEY = 'canvas-studio-active-component-drag';
@@ -150,6 +152,8 @@ export default class CanvasStudioPlugin extends Plugin {
   private drawingWidth = 3;
   private drawingTool: 'pen' | 'eraser' = 'pen';
   private laneTargetNotice: HTMLElement | null = null;
+  private printCleanup: (() => void) | null = null;
+  private associatedEdgeElements = new Set<SVGElement>();
 
   override async onload(): Promise<void> {
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
@@ -277,9 +281,25 @@ export default class CanvasStudioPlugin extends Plugin {
       checkCallback: (checking) => this.commandAvailability(checking, () => this.openSearch())
     });
     this.addCommand({
+      id: 'print-current-canvas-pdf',
+      name: 'Canvas Studio: 打印当前白板（保存为 PDF）',
+      checkCallback: (checking) => this.commandAvailability(checking, () => this.printCanvasToPdf())
+    });
+    this.addCommand({
       id: 'start-presentation',
       name: 'Canvas Studio: 开始演示',
       checkCallback: (checking) => this.commandAvailability(checking, () => this.runAdvancedCommand('advanced-canvas:start-presentation'))
+    });
+    this.addCommand({
+      id: 'set-presentation-start-node',
+      name: 'Canvas Studio: 设置演示起点',
+      checkCallback: (checking) => {
+        const canvas = getCurrentCanvas(this.app);
+        const nodes = canvas ? selectedNodeData(canvas) : [];
+        if (!canvas || canvas.readonly || nodes.length !== 1) return false;
+        if (!checking) this.setPresentationStartNode();
+        return true;
+      }
     });
     for (const [id, name, commandId] of [
       ['previous-presentation-node', 'Canvas Studio: 演示上一个节点', 'advanced-canvas:previous-node'],
@@ -332,6 +352,13 @@ export default class CanvasStudioPlugin extends Plugin {
       name: 'Canvas Studio: 打开常用组件库',
       checkCallback: (checking) => this.commandAvailability(checking, () => this.openComponentLibrary())
     });
+    for (const component of COMPONENT_LIBRARY) {
+      this.addCommand({
+        id: `insert-component-${component.id}`,
+        name: `Canvas Studio: 插入${component.name}组件`,
+        checkCallback: (checking) => this.commandAvailability(checking, () => this.insertComponent(component))
+      });
+    }
     this.addCommand({
       id: 'save-selection-component',
       name: 'Canvas Studio: 保存选区为组件',
@@ -359,7 +386,10 @@ export default class CanvasStudioPlugin extends Plugin {
       const canvas = args[0] as RuntimeCanvas | undefined;
       if (canvas) this.syncMindMapVisibility(canvas);
     }));
-    this.registerEvent(this.app.workspace.on('advanced-canvas:selection-changed' as never, () => this.updateToolbarState()));
+    this.registerEvent(this.app.workspace.on('advanced-canvas:selection-changed' as never, (...args: unknown[]) => {
+      this.updateToolbarState();
+      this.syncAssociatedEdgeHighlight(args[0] as RuntimeCanvas | undefined);
+    }));
     this.registerEvent(this.app.workspace.on('advanced-canvas:selection-changed' as never, (...args: unknown[]) => {
       this.refreshEdgeWaypointOverlay(args[0] as RuntimeCanvas | undefined);
     }));
@@ -386,6 +416,8 @@ export default class CanvasStudioPlugin extends Plugin {
   }
 
   override onunload(): void {
+    this.printCleanup?.();
+    this.clearAssociatedEdgeHighlight();
     for (const node of this.toolbarCanvas?.nodes.values() ?? []) {
       this.clearTypography(node);
       node.nodeEl?.style.removeProperty('display');
@@ -636,6 +668,7 @@ export default class CanvasStudioPlugin extends Plugin {
       case 'search': this.openSearch(); break;
       case 'export': this.openExportMenu(anchor); break;
       case 'present': this.runAdvancedCommand('advanced-canvas:start-presentation'); break;
+      case 'set-start-node': this.setPresentationStartNode(); break;
       case 'previous-node': this.runAdvancedCommand('advanced-canvas:previous-node'); break;
       case 'next-node': this.runAdvancedCommand('advanced-canvas:next-node'); break;
       case 'end-presentation': this.runAdvancedCommand('advanced-canvas:end-presentation'); break;
@@ -668,7 +701,44 @@ export default class CanvasStudioPlugin extends Plugin {
       button.toggleAttribute('disabled', readonly && !READONLY_TOOLBAR_ACTIONS.has((action ?? '') as ToolbarActionId | 'more'));
     }
     this.updateInspector();
+    this.syncAssociatedEdgeHighlight(canvas);
     this.refreshEdgeWaypointOverlay(this.toolbarCanvas ?? undefined);
+  }
+
+  private setPresentationStartNode(): void {
+    const canvas = this.currentCanvas();
+    if (!canvas || canvas.readonly) return;
+    const nodes = selectedNodeData(canvas);
+    if (nodes.length !== 1) {
+      new Notice('请先选中一个节点，再设置演示起点。', 2500);
+      return;
+    }
+    replaceCanvasData(canvas, setCanvasPresentationStartNode(canvas.getData(), nodes[0]!.id));
+    new Notice('已将当前节点设为演示起点。', 1800);
+  }
+
+  private syncAssociatedEdgeHighlight(canvas?: RuntimeCanvas): void {
+    this.clearAssociatedEdgeHighlight();
+    const target = canvas ?? this.toolbarCanvas;
+    if (!target?.edges) return;
+    const edgeIds = associatedEdgeIds(
+      [...target.edges.values()].map((edge) => edge.getData() as CanvasEdgeData),
+      selectedNodeData(target).map((node) => node.id)
+    );
+    for (const edgeId of edgeIds) {
+      const edge = target.edges.get(edgeId);
+      if (!edge) continue;
+      for (const element of [edge.path?.display, edge.path?.interaction]) {
+        if (!(element instanceof SVGElement)) continue;
+        element.classList.add('canvas-studio-associated-edge');
+        this.associatedEdgeElements.add(element);
+      }
+    }
+  }
+
+  private clearAssociatedEdgeHighlight(): void {
+    for (const element of this.associatedEdgeElements) element.classList.remove('canvas-studio-associated-edge');
+    this.associatedEdgeElements.clear();
   }
 
   private updateInspector(): void {
@@ -1124,6 +1194,8 @@ export default class CanvasStudioPlugin extends Plugin {
   }
 
   private unmountToolbar(): void {
+    this.printCleanup?.();
+    this.clearAssociatedEdgeHighlight();
     this.unmountComponentDropTarget();
     this.stopDrawingMode();
     this.clearEdgeWaypointOverlay();
@@ -1445,7 +1517,7 @@ export default class CanvasStudioPlugin extends Plugin {
     if (!component) return;
     event.preventDefault();
     this.clearComponentDropPreview();
-    this.insertComponentAt(component, this.componentDropPoint(canvas, event.clientX, event.clientY));
+    this.insertComponentAt(component, this.componentDropPoint(canvas, event.clientX, event.clientY), canvas);
   }
 
   private canvasAtEventTarget(target: EventTarget | null): RuntimeCanvas | null {
@@ -1886,11 +1958,11 @@ export default class CanvasStudioPlugin extends Plugin {
   private insertComponent(component: ComponentSpec): void {
     const canvas = this.currentCanvas();
     if (!canvas) return;
-    this.insertComponentAt(component, this.insertionOrigin(canvas, true));
+    this.insertComponentAt(component, this.insertionOrigin(canvas, true), canvas);
   }
 
-  private insertComponentAt(component: ComponentSpec, origin: { x: number; y: number }): void {
-    const canvas = this.currentCanvas();
+  private insertComponentAt(component: ComponentSpec, origin: { x: number; y: number }, targetCanvas?: RuntimeCanvas): void {
+    const canvas = targetCanvas ?? this.currentCanvas();
     if (!canvas || canvas.readonly) return;
     const data = canvas.getData();
     const initialFragment = component.build(origin, randomId);
@@ -1918,6 +1990,7 @@ export default class CanvasStudioPlugin extends Plugin {
   }
 
   private openExportMenu(anchor: HTMLElement): void {
+    const canvas = this.currentCanvas();
     const menu = new Menu();
     menu.addItem((item) => item
       .setTitle('导出整张白板（PNG/SVG）')
@@ -1927,16 +2000,73 @@ export default class CanvasStudioPlugin extends Plugin {
       .setTitle('导出选中内容（PNG/SVG）')
       .setIcon('scan')
       .onClick(() => (this.app as unknown as { commands: { executeCommandById(id: string): void } }).commands.executeCommandById('advanced-canvas:export-selected-as-image')));
+    menu.addItem((item) => item
+      .setTitle('打印当前白板（可保存为 PDF）')
+      .setIcon('printer')
+      .setDisabled(!canvas)
+      .onClick(() => this.printCanvasToPdf()));
     menu.showAtPosition(this.menuPosition(anchor));
   }
 
-  private runAdvancedCommand(commandId: string): void {
+  private printCanvasToPdf(): void {
+    const canvas = this.currentCanvas();
+    const wrapper = canvas?.wrapperEl;
+    if (!canvas || !wrapper) return;
+    if (typeof window.print !== 'function') {
+      new Notice('当前宿主没有提供打印能力。', 2500);
+      return;
+    }
+
+    this.printCleanup?.();
+    const originalViewport = canvas.tx !== undefined && canvas.ty !== undefined && canvas.tZoom !== undefined
+      ? { x: canvas.tx, y: canvas.ty, zoom: canvas.tZoom }
+      : null;
+    let timeout = 0;
+    let finished = false;
+    const cleanup = () => {
+      if (finished) return;
+      finished = true;
+      window.removeEventListener('afterprint', cleanup);
+      window.clearTimeout(timeout);
+      document.body.removeClass('canvas-studio-printing');
+      wrapper.classList.remove('canvas-studio-print-target');
+      if (originalViewport && canvas.setViewport) {
+        canvas.setViewport(originalViewport.x, originalViewport.y, originalViewport.zoom);
+      }
+      if (this.printCleanup === cleanup) this.printCleanup = null;
+    };
+    this.printCleanup = cleanup;
+    document.body.addClass('canvas-studio-printing');
+    wrapper.classList.add('canvas-studio-print-target');
+    window.addEventListener('afterprint', cleanup, { once: true });
+    timeout = window.setTimeout(cleanup, 120_000);
+    try {
+      canvas.zoomToFit?.();
+    } catch (error) {
+      cleanup();
+      new Notice(error instanceof Error ? `无法准备打印视图：${error.message}` : '无法准备打印视图。', 3000);
+      return;
+    }
+    new Notice('正在打开打印对话框，可选择“保存为 PDF”。', 2600);
+    window.setTimeout(() => {
+      if (finished) return;
+      try {
+        window.print();
+      } catch (error) {
+        cleanup();
+        new Notice(error instanceof Error ? `打开打印对话框失败：${error.message}` : '打开打印对话框失败。', 3000);
+      }
+    }, 500);
+  }
+
+  private runAdvancedCommand(commandId: string): boolean {
     const commands = (this.app as unknown as { commands?: { commands?: Record<string, unknown>; executeCommandById?: (id: string) => boolean } }).commands;
     if (!commands?.commands?.[commandId] || !commands.executeCommandById) {
       new Notice('当前未检测到 Advanced Canvas 对应能力。', 3000);
-      return;
+      return false;
     }
     commands.executeCommandById(commandId);
+    return true;
   }
 
   private zoomToFitWithToolbarClearance(): void {

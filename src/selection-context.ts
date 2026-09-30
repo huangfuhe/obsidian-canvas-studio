@@ -15,9 +15,9 @@ export function describeSelectionContext(nodes: CanvasNodeData[], edges: CanvasE
   return { kind: 'canvas', label: '整张画布', count: 0 };
 }
 
-const NODE_ONLY_ACTIONS = new Set(['create-child', 'create-sibling', 'layout', 'shape', 'style', 'copy-style', 'paste-style']);
+const NODE_ONLY_ACTIONS = new Set(['create-child', 'create-sibling', 'layout', 'shape', 'style', 'copy-style', 'paste-style', 'set-start-node']);
 const EDGE_ONLY_ACTIONS = new Set(['edge']);
-const EDITING_ACTIONS = new Set(['arrange', 'shape', 'style', 'copy-style', 'paste-style', 'edge', 'create-child', 'create-sibling', 'layout']);
+const EDITING_ACTIONS = new Set(['arrange', 'shape', 'style', 'copy-style', 'paste-style', 'edge', 'create-child', 'create-sibling', 'layout', 'set-start-node']);
 
 export function isContextualActionHidden(actionId: string, kind: SelectionContextKind): boolean {
   if (kind === 'canvas') return EDITING_ACTIONS.has(actionId);

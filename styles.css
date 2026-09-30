@@ -4,6 +4,38 @@
   --canvas-studio-toolbar-radius: 8px;
 }
 
+@media print {
+  @page {
+    margin: 0;
+    size: landscape;
+  }
+
+  body.canvas-studio-printing * {
+    visibility: hidden !important;
+  }
+
+  body.canvas-studio-printing .canvas-studio-print-target,
+  body.canvas-studio-printing .canvas-studio-print-target * {
+    visibility: visible !important;
+  }
+
+  body.canvas-studio-printing .canvas-studio-print-target {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    overflow: hidden !important;
+    background: var(--canvas-background, #fff) !important;
+  }
+
+  body.canvas-studio-printing .canvas-studio-print-target .canvas-studio-toolbar,
+  body.canvas-studio-printing .canvas-studio-print-target .canvas-studio-inspector,
+  body.canvas-studio-printing .canvas-studio-print-target .canvas-studio-lane-target-notice,
+  body.canvas-studio-printing .canvas-studio-print-target .canvas-studio-snap-guide {
+    display: none !important;
+  }
+}
+
 .canvas-studio-toolbar {
   position: absolute;
   top: 12px;
@@ -21,6 +53,15 @@
   backdrop-filter: blur(12px);
   max-width: calc(100% - 32px);
   overflow-x: auto;
+}
+
+.canvas-wrapper.presentation-mode .canvas-studio-toolbar,
+.canvas-wrapper.presentation-mode .canvas-studio-inspector,
+.canvas-wrapper.presentation-mode .canvas-studio-drawing-overlay,
+.canvas-wrapper.presentation-mode .canvas-studio-edge-waypoint-overlay,
+.canvas-wrapper.presentation-mode .canvas-studio-lane-target-notice,
+.canvas-wrapper.presentation-mode .canvas-studio-snap-guide {
+  display: none !important;
 }
 
 .canvas-studio-toolbar-context {
@@ -57,6 +98,12 @@
   outline-offset: 6px;
   box-shadow: 0 0 0 6px color-mix(in srgb, var(--interactive-accent) 22%, transparent);
   animation: canvas-studio-lane-target-pulse 900ms ease-in-out infinite alternate;
+}
+
+.canvas-studio-associated-edge {
+  stroke: var(--interactive-accent) !important;
+  stroke-width: 3px !important;
+  filter: drop-shadow(0 0 2px color-mix(in srgb, var(--interactive-accent) 55%, transparent));
 }
 
 .canvas-studio-lane-target-notice {
