@@ -24,6 +24,8 @@ node, and edge fields survived the round trip.
 - A real X11 Obsidian window verified the Chinese toolbar, node/edge inspector,
   fit-to-view clearance, full-screen presentation overlay hiding, and restoring
   the editing UI after presentation ends.
+- A real X11 Obsidian window verified the search panel's upper-right placement;
+  the panel remains draggable and no longer centers over the main Canvas area.
 - A real isolated Canvas verified the native `metadata.startNode` presentation
   entry and the Canvas Studio presentation command path.
 - The component command path was smoke tested on an isolated Canvas: the

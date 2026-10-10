@@ -415,6 +415,29 @@
   color: var(--text-muted);
 }
 
+.canvas-studio-search-modal {
+  position: fixed;
+  margin: 0;
+}
+
+.modal-container.canvas-studio-search-modal-container {
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: 72px 24px 24px;
+}
+
+.modal-container.canvas-studio-search-modal-container .canvas-studio-search-modal {
+  position: relative;
+  inset: auto;
+  margin: 0;
+  transform: none;
+}
+
+.canvas-studio-search-drag-handle {
+  cursor: move;
+  user-select: none;
+}
+
 .canvas-studio-search-modal input[type='search'],
 .canvas-studio-search-modal input[type='text'] {
   display: block;

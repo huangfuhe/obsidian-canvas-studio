@@ -441,12 +441,17 @@ export default class CanvasStudioPlugin extends Plugin {
   private handleKeydown(event: KeyboardEvent): void {
     if (event.defaultPrevented || event.isComposing) return;
     const canvas = getCurrentCanvas(this.app);
-    if (!canvas || canvas.readonly) return;
+    if (!canvas) return;
     const target = event.target;
-    if (!(target instanceof Node) || !canvas.wrapperEl?.contains(target)) return;
-    if (target instanceof HTMLElement && target.closest('input, textarea, [contenteditable="true"], .cm-editor')) return;
-
     const modifier = event.ctrlKey || event.metaKey;
+    if (target instanceof HTMLElement && target.closest('input, textarea, [contenteditable="true"], .cm-editor')) return;
+    if (modifier && !event.shiftKey && !event.altKey && event.key.toLocaleLowerCase() === 'f') {
+      event.preventDefault();
+      this.openSearch();
+      return;
+    }
+    if (!(target instanceof Node) || !canvas.wrapperEl?.contains(target)) return;
+    if (canvas.readonly) return;
     if (modifier && event.shiftKey && event.key.toLocaleLowerCase() === 'l' && !event.altKey) {
       event.preventDefault();
       this.layoutMindMap();
@@ -1786,6 +1791,34 @@ export default class CanvasStudioPlugin extends Plugin {
     if (!node) return;
     canvas.selectOnly?.(node);
     canvas.zoomToSelection?.();
+    this.repositionSearchPanelAwayFromNode(canvas, node);
+  }
+
+  private repositionSearchPanelAwayFromNode(canvas: RuntimeCanvas, node: RuntimeCanvasNode): void {
+    const panel = document.querySelector<HTMLElement>('.canvas-studio-search-modal');
+    const wrapper = canvas.wrapperEl;
+    if (!panel || !wrapper) return;
+    const nodeRect = node.nodeEl?.getBoundingClientRect();
+    if (!nodeRect) return;
+    const panelRect = panel.getBoundingClientRect();
+    if (!this.rectsOverlap(panelRect, nodeRect)) return;
+    const wrapperRect = wrapper.getBoundingClientRect();
+    const candidates = [
+      { left: wrapperRect.right - panelRect.width - 24, top: wrapperRect.top + 24 },
+      { left: wrapperRect.left + 24, top: wrapperRect.top + 24 },
+      { left: wrapperRect.right - panelRect.width - 24, top: wrapperRect.bottom - panelRect.height - 24 },
+      { left: wrapperRect.left + 24, top: wrapperRect.bottom - panelRect.height - 24 }
+    ];
+    const next = candidates.find((candidate) => !this.rectsOverlap({ ...panelRect, ...candidate }, nodeRect));
+    if (!next) return;
+    panel.style.left = `${next.left}px`;
+    panel.style.top = `${next.top}px`;
+    panel.style.right = 'auto';
+    panel.style.bottom = 'auto';
+  }
+
+  private rectsOverlap(a: { left: number; top: number; width: number; height: number }, b: { left: number; top: number; width: number; height: number }): boolean {
+    return a.left < b.left + b.width && a.left + a.width > b.left && a.top < b.top + b.height && a.top + a.height > b.top;
   }
 
   private layoutMindMap(): void {
@@ -3428,6 +3461,8 @@ class CanvasSearchModal extends Modal {
   private matchList!: HTMLElement;
   private matches: CanvasSearchMatch[] = [];
   private cursor = 0;
+  private dragging = false;
+  private dragOffset = { x: 0, y: 0 };
 
   constructor(
     app: CanvasStudioPlugin['app'],
@@ -3441,7 +3476,16 @@ class CanvasSearchModal extends Modal {
 
   override onOpen(): void {
     this.modalEl.addClass('canvas-studio-search-modal');
+    this.modalEl.parentElement?.addClass('canvas-studio-search-modal-container');
+    this.modalEl.setAttribute('aria-label', 'Canvas 搜索与替换');
+    this.modalEl.style.left = 'auto';
+    this.modalEl.style.top = '72px';
+    this.modalEl.style.right = '24px';
+    this.modalEl.style.bottom = 'auto';
     this.titleEl.setText('Canvas 搜索与替换');
+    this.titleEl.addClass('canvas-studio-search-drag-handle');
+    this.titleEl.setAttribute('aria-label', '拖动搜索面板');
+    this.titleEl.addEventListener('pointerdown', (event) => this.startDrag(event));
     const queryLabel = this.contentEl.createEl('label', { text: '搜索文本' });
     this.queryInput = queryLabel.createEl('input', {
       type: 'search',
@@ -3475,8 +3519,35 @@ class CanvasSearchModal extends Modal {
   }
 
   override onClose(): void {
+    this.modalEl.parentElement?.removeClass('canvas-studio-search-modal-container');
+    document.removeEventListener('pointermove', this.handleDrag);
+    document.removeEventListener('pointerup', this.stopDrag);
     this.contentEl.empty();
   }
+
+  private startDrag = (event: PointerEvent): void => {
+    if (event.button !== 0) return;
+    const rect = this.modalEl.getBoundingClientRect();
+    this.dragging = true;
+    this.dragOffset = { x: event.clientX - rect.left, y: event.clientY - rect.top };
+    document.addEventListener('pointermove', this.handleDrag);
+    document.addEventListener('pointerup', this.stopDrag);
+    event.preventDefault();
+  };
+
+  private handleDrag = (event: PointerEvent): void => {
+    if (!this.dragging) return;
+    this.modalEl.style.left = `${Math.max(8, event.clientX - this.dragOffset.x)}px`;
+    this.modalEl.style.top = `${Math.max(8, event.clientY - this.dragOffset.y)}px`;
+    this.modalEl.style.right = 'auto';
+    this.modalEl.style.bottom = 'auto';
+  };
+
+  private stopDrag = (): void => {
+    this.dragging = false;
+    document.removeEventListener('pointermove', this.handleDrag);
+    document.removeEventListener('pointerup', this.stopDrag);
+  };
 
   private refreshMatches(): void {
     const query = this.queryInput.value;

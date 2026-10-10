@@ -363,6 +363,8 @@ presentation start node. During presentation mode, Canvas Studio's editing
 overlays are hidden so the native Canvas view remains unobstructed.
 
 The 0.9.95 patch adds command-palette insertion for the built-in components.
+Canvas search also opens with `Ctrl/Cmd+F`, starts at the upper right, and can
+be dragged by its title bar while preserving replace and locate actions.
 
 The current focused verification scope is 116 tests.
 
