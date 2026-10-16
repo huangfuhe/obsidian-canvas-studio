@@ -53,6 +53,7 @@ import { createBasicTextNode, createShapeNode, fittedTextNodeHeight, type BasicS
 import { canvasPointToClient, clientPointToCanvas, parseCssTransform, viewportWithOverlayClearance } from './canvas-position';
 import { addWaypointAtLongestSegment, edgeRoutePoints, EDGE_WAYPOINTS_KEY, parseEdgeWaypoints, polylinePath, routeEdgeWithObstacles, serializeEdgeWaypoints, type EdgeWaypoint } from './edge-waypoints';
 import { addCanvasStroke, canvasStrokes, clearCanvasStrokes, removeLastCanvasStroke, removeStrokeNearPoint, type CanvasStroke, type StrokePoint } from './strokes';
+import { adjustSelectedTextNodeLayout } from './text-fit';
 import type { CanvasDocument, CanvasEdgeData, CanvasNodeData, CanvasStyleAttributes, LayoutDirection } from './types';
 
 interface CanvasStudioSettings {
@@ -186,7 +187,7 @@ export default class CanvasStudioPlugin extends Plugin {
     });
     this.addCommand({
       id: 'fit-selected-text-height',
-      name: 'Canvas Studio: 适应文本节点高度',
+      name: 'Canvas Studio: 适应文本高度和间距',
       checkCallback: (checking) => this.commandAvailability(checking, () => this.fitSelectedTextNodeHeights())
     });
     this.addCommand({
@@ -1099,7 +1100,7 @@ export default class CanvasStudioPlugin extends Plugin {
 
     const footer = container.createDiv({ cls: 'canvas-studio-inspector-footer' });
     if (nodes.some((node) => node.type === 'text')) {
-      const fitHeight = footer.createEl('button', { text: '适应文本高度' });
+      const fitHeight = footer.createEl('button', { text: '适应文本高度和间距' });
       fitHeight.addEventListener('click', () => this.fitSelectedTextNodeHeights());
     }
     const more = footer.createEl('button', { text: '更多字体设置', cls: 'mod-cta' });
@@ -2802,24 +2803,121 @@ export default class CanvasStudioPlugin extends Plugin {
   }
 
   private fitSelectedTextNodeHeights(): void {
+    // Typography changes and Canvas imports are applied on the next layout
+    // pass. Measure after that pass so the fit uses the selected font metrics.
+    window.requestAnimationFrame(() => { void this.fitSelectedTextNodeHeightsNow(); });
+  }
+
+  private async fitSelectedTextNodeHeightsNow(): Promise<void> {
     const canvas = this.currentCanvas();
     if (!canvas || canvas.readonly) return;
-    const heights = new Map<string, number>();
+    if (document.fonts) {
+      await document.fonts.ready;
+      await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
+    }
+    const sizes = new Map<string, { height: number }>();
     for (const runtimeNode of selectedRuntimeNodes(canvas)) {
       if (runtimeNode.getData().type !== 'text') continue;
-      const content = runtimeNode.nodeEl?.querySelector('.canvas-node-content');
-      if (!(content instanceof HTMLElement)) continue;
-      heights.set(runtimeNode.id, fittedTextNodeHeight(content.scrollHeight));
+      const node = runtimeNode.getData();
+      const contentHeight = this.measureIntrinsicTextHeight(runtimeNode);
+      if (contentHeight === null) continue;
+      const shape = node.styleAttributes?.shape;
+      const minimum = shape === 'pill'
+        ? 96
+        : shape === 'diamond'
+          ? 180
+          : shape === 'circle'
+            ? Math.max(220, node.width)
+            : shape === 'document' || shape === 'database'
+              ? 120
+              : 80;
+      sizes.set(runtimeNode.id, { height: fittedTextNodeHeight(contentHeight, minimum, 0) });
     }
-    if (heights.size === 0) {
+    if (sizes.size === 0) {
       new Notice('没有可测量的选中文本节点。', 2200);
       return;
     }
-    replaceCanvasData(canvas, updateNodes(canvas.getData(), new Set(heights.keys()), (node) => ({
-      ...node,
-      height: heights.get(node.id) ?? node.height
-    })));
-    new Notice(`已调整 ${heights.size} 个文本节点高度。`, 1600);
+    const data = canvas.getData();
+    const nextData = adjustSelectedTextNodeLayout(data, new Set(sizes.keys()), sizes, 'vertical');
+    const changed = nextData.nodes.some((node, index) => {
+      const previous = data.nodes[index];
+      return previous && (node.x !== previous.x || node.y !== previous.y || node.width !== previous.width || node.height !== previous.height);
+    });
+    if (!changed) {
+      new Notice('选中文本节点已经适应当前字体。', 1800);
+      return;
+    }
+    replaceCanvasData(canvas, nextData);
+    new Notice(`已调整 ${sizes.size} 个文本节点高度和间距。`, 1800);
+  }
+
+  private measureIntrinsicTextHeight(runtimeNode: RuntimeCanvasNode): number | null {
+    const source = runtimeNode.nodeEl;
+    const sourceContent = source?.querySelector('.canvas-node-content');
+    if (!(source instanceof HTMLElement) || !(sourceContent instanceof HTMLElement)) return null;
+
+    const clone = source.cloneNode(true) as HTMLElement;
+    const sourceWidth = source.clientWidth || Number.parseFloat(getComputedStyle(source).width);
+    clone.style.position = 'fixed';
+    clone.style.left = '-100000px';
+    clone.style.top = '0';
+    clone.style.width = Number.isFinite(sourceWidth) && sourceWidth > 0 ? `${sourceWidth}px` : `${runtimeNode.width}px`;
+    clone.style.height = 'auto';
+    clone.style.minHeight = '0';
+    clone.style.maxHeight = 'none';
+    clone.style.transform = 'none';
+    clone.style.visibility = 'hidden';
+    clone.style.pointerEvents = 'none';
+    clone.style.contain = 'none';
+
+    const nodeContainer = clone.querySelector('.canvas-node-container');
+    if (nodeContainer instanceof HTMLElement) {
+      nodeContainer.style.display = 'block';
+      nodeContainer.style.height = 'auto';
+      nodeContainer.style.minHeight = '0';
+      nodeContainer.style.maxHeight = 'none';
+      nodeContainer.style.contain = 'none';
+    }
+
+    const content = clone.querySelector('.canvas-node-content');
+    if (!(content instanceof HTMLElement)) return null;
+    content.style.height = 'auto';
+    content.style.minHeight = '0';
+    content.style.maxHeight = 'none';
+    content.style.overflow = 'visible';
+    content.style.boxSizing = 'border-box';
+    const renderedText = content.querySelector('.markdown-preview-view, .markdown-embed-content, .cm-content');
+    if (renderedText instanceof HTMLElement) {
+      for (const element of [renderedText, ...Array.from(renderedText.querySelectorAll<HTMLElement>('*'))]) {
+        element.style.setProperty('height', 'auto', 'important');
+        element.style.setProperty('min-height', '0', 'important');
+        element.style.setProperty('max-height', 'none', 'important');
+        element.style.setProperty('overflow', 'visible', 'important');
+        element.style.setProperty('flex', 'none', 'important');
+      }
+      renderedText.style.setProperty('display', 'block', 'important');
+    }
+    document.body.appendChild(clone);
+    const contentStyle = getComputedStyle(content);
+    const renderedStyle = renderedText instanceof HTMLElement ? getComputedStyle(renderedText) : null;
+    const sizer = renderedText?.querySelector<HTMLElement>('.markdown-preview-sizer');
+    if (sizer) {
+      sizer.style.setProperty('height', 'auto', 'important');
+      sizer.style.setProperty('min-height', '0', 'important');
+      sizer.style.removeProperty('padding-bottom');
+    }
+    const bodyHeight = sizer?.scrollHeight ?? renderedText?.scrollHeight ?? content.scrollHeight;
+    const px = (value: string | undefined): number => {
+      const parsed = Number.parseFloat(value ?? '0');
+      return Number.isFinite(parsed) ? parsed : 0;
+    };
+    const height = bodyHeight
+      + px(contentStyle.paddingTop) + px(contentStyle.paddingBottom)
+      + px(contentStyle.borderTopWidth) + px(contentStyle.borderBottomWidth)
+      + px(renderedStyle?.paddingTop) + px(renderedStyle?.paddingBottom)
+      + px(renderedStyle?.borderTopWidth) + px(renderedStyle?.borderBottomWidth);
+    clone.remove();
+    return Number.isFinite(height) && height >= 0 ? height : null;
   }
 
   private addSelectedTableDimension(axis: 'row' | 'column'): void {

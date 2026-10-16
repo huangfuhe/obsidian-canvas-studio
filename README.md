@@ -307,8 +307,9 @@ action while keeping strokes in optional Canvas Studio metadata.
 The 0.9.76 patch adds a drag-capable eraser that removes the nearest stored
 stroke without modifying Canvas nodes or edges.
 
-The 0.9.77 patch adds a rendered-content height fit action for selected text
-nodes, preserving their width and position.
+The text-height fit action measures rendered content without reusing the
+current node height, preserves each node's width, and moves later nodes only
+as needed to keep the existing vertical gaps.
 
 The 0.9.78 patch adds semantic table row/column metadata and inspector actions
 for appending rows and columns to native group/text tables.

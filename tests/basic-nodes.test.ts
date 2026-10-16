@@ -31,5 +31,6 @@ test('creates a native flowchart shape without an existing selection', () => {
 test('fits text-node height to rendered content with a minimum', () => {
   assert.equal(fittedTextNodeHeight(40), 80);
   assert.equal(fittedTextNodeHeight(101.2), 118);
+  assert.equal(fittedTextNodeHeight(101.2, 80, 0), 102);
   assert.equal(fittedTextNodeHeight(Number.NaN), 80);
 });
